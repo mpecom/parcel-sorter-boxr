@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parcel Sorting - Two Step</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    #app {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1.2rem;
+      box-sizing: border-box;
+    }
+
+    #message {
+      margin-top: 20px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      min-height: 3rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.3s;
+    }
+
+    .success {
+      color: #fff;
+      background-color: #4caf50; /* Green */
+    }
+
+    .error {
+      color: #fff;
+      background-color: #f44336; /* Red */
+    }
+
+    .info {
+      color: #333;
+      background-color: #f0f0f0; /* Light grey */
+    }
+
+  </style>
+</head>
+<body>
+
+  <h1>Parcel Sorting - Two-Step Scan</h1>
+  <div id="app">
+    <p>Current Step: <strong id="current-step">Scan Package</strong></p>
+    <input
+      type="text"
+      id="scanner-input"
+      placeholder="Scan here..."
+      autofocus
+    />
+    <div id="message" class="info">
+      Please scan the package barcode.
+    </div>
+  </div>
+
+  <!-- Success and Error sounds -->
+  <!-- Replace these with your actual sound files (mp3, wav, etc.) -->
+  <audio id="success-sound" src="success.mp3" preload="auto"></audio>
+  <audio id="error-sound" src="error.mp3" preload="auto"></audio>
+
+  <script>
+    // ------------------------------
+    // 1. List of carriers and bins
+    // ------------------------------
+    // Extend this list as needed:
+    // prefix: the barcode prefix
+    // name:   the carrier's name (for display)
+    // bin:    the bin code that must be scanned for confirmation
+    const carriers = [
+      { prefix: "0034", name: "DHL", bin: "1050" },
+      { prefix: "8064", name: "GLS", bin: "1070" },
+      // Add more carriers if needed
+      // { prefix: "1234", name: "OtherCarrier", bin: "9999" },
+    ];
+
+    // -----------------------------
+    // 2. State Variables
+    // -----------------------------
+    let currentStep = "scanPackage"; // or "scanBin"
+    let expectedBin = null;          // we store the bin we expect in Step 2
+
+    // Get references to HTML elements
+    const scannerInput = document.getElementById("scanner-input");
+    const messageDiv = document.getElementById("message");
+    const currentStepLabel = document.getElementById("current-step");
+
+    const successSound = document.getElementById("success-sound");
+    const errorSound = document.getElementById("error-sound");
+
+    // ----------------------------
+    // 3. Listen for input changes
+    // ----------------------------
+    // Many barcode scanners will “type” the code and then press Enter,
+    // so we can just listen for the "change" event:
+    scannerInput.addEventListener("change", handleScan);
+
+    // Alternatively, you could use a keypress or keyup event to detect
+    // when the user presses Enter. That depends on how your scanner works.
+    //
+    // scannerInput.addEventListener("keyup", (e) => {
+    //   if (e.key === "Enter") {
+    //     handleScan();
+    //   }
+    // });
+
+    function handleScan() {
+      const code = scannerInput.value.trim();
+      // Clear the input for the next scan
+      scannerInput.value = "";
+
+      if (!code) {
+        return;
+      }
+
+      if (currentStep === "scanPackage") {
+        handlePackageScan(code);
+      } else if (currentStep === "scanBin") {
+        handleBinScan(code);
+      }
+    }
+
+    // ------------------
+    // 4. Package Scanning
+    // ------------------
+    function handlePackageScan(barcode) {
+      // Find which carrier matches this barcode
+      const carrier = carriers.find(c => barcode.startsWith(c.prefix));
+
+      if (!carrier) {
+        showMessage(
+          "ERROR: Unknown carrier or invalid package barcode!",
+          false
+        );
+        // Stay in the same step. Possibly user scans again.
+        return;
+      }
+
+      // We found the carrier => proceed to bin scanning step
+      expectedBin = carrier.bin;
+
+      // Let user know which bin is required
+      showMessage(
+        `Package: ${carrier.name}. Please scan bin ${carrier.bin} to confirm.`,
+        true, // We'll treat this as an "info" success or green? Let's do a neutral style if you'd like.
+      );
+      currentStep = "scanBin";
+      updateStepLabel();
+    }
+
+    // ----------------
+    // 5. Bin Scanning
+    // ----------------
+    function handleBinScan(scannedBin) {
+      if (scannedBin === expectedBin) {
+        // Correct bin!
+        showMessage("Correct Bin! Sorting Complete.", true);
+        playSuccessSound();
+      } else {
+        // Wrong bin
+        showMessage(`ERROR: Wrong bin! Expected ${expectedBin}.`, false);
+        playErrorSound();
+        // Optionally remain in "scanBin" state to let them retry
+        // Or revert to "scanPackage"? 
+        // For now, let's remain in "scanBin" so the user can try again 
+        // if they scanned the bin incorrectly.
+        return;
+      }
+
+      // After a correct bin scan, reset to scan next package
+      currentStep = "scanPackage";
+      expectedBin = null;
+      updateStepLabel();
+    }
+
+    // -------------------
+    // 6. UI Helper Stuff
+    // -------------------
+    function showMessage(msg, isSuccess) {
+      // If isSuccess === true, show green
+      // If isSuccess === false, show red
+      // We can also have an "info" style if you prefer
+
+      messageDiv.textContent = msg;
+
+      // Reset classes
+      messageDiv.classList.remove("success", "error", "info");
+
+      if (typeof isSuccess === "boolean") {
+        if (isSuccess) {
+          messageDiv.classList.add("success");
+          playSuccessSound();
+        } else {
+          messageDiv.classList.add("error");
+          playErrorSound();
+        }
+      } else {
+        // If not boolean, treat as neutral/info
+        messageDiv.classList.add("info");
+      }
+    }
+
+    function updateStepLabel() {
+      currentStepLabel.textContent =
+        currentStep === "scanPackage" ? "Scan Package" : "Scan Bin";
+    }
+
+    function playSuccessSound() {
+      successSound.currentTime = 0;
+      successSound.play();
+    }
+
+    function playErrorSound() {
+      errorSound.currentTime = 0;
+      errorSound.play();
+    }
+  </script>
+</body>
+</html>
