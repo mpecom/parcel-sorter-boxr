@@ -2,51 +2,332 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Parcel Sorting App</title>
+  <title>Parcel Sorting with Full-Screen Overlay</title>
+  <!-- Make it mobile-friendly -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles.css" />
 
-  <h2>Scans Dashboard</h2>
-<ul id="scans-list"></ul>
-  
-  <!-- In your index.html HEAD, below <title> and above your scripts -->
-<script type="module">
-  // Import Firebase modules
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
 
-  // You can import Auth, etc. if needed
-  // import { getAuth, signInAnonymously, ... } from ...
+    h1 {
+      text-align: center;
+    }
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
-    authDomain: "boxr-parcel-sorter.firebaseapp.com",
-    projectId: "boxr-parcel-sorter",
-    storageBucket: "boxr-parcel-sorter.firebasestorage.app",
-    messagingSenderId: "615746259085",
-    appId: "1:615746259085:web:b6f7cba3edf84901bcfac4"
-  };
+    #app {
+      max-width: 600px;
+      margin: 0 auto;
+      text-align: center;
+    }
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1.2rem;
+      box-sizing: border-box;
+    }
 
-  // Make db available in global scope
-  window._firebaseDb = db;
-</script>
+    #message {
+      margin-top: 20px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      min-height: 3rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.3s;
+    }
 
+    /* Just for the normal message display (when not using the overlay) */
+    .info {
+      color: #333;
+      background-color: #f0f0f0;
+    }
+
+    /* Fullscreen overlay styling */
+    #overlay {
+      /* Start off hidden */
+      display: none;
+      /* Fill the entire browser window */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* Place it above other elements */
+      z-index: 9999; 
+      /* Use Flexbox to center content */
+      display: flex; 
+      align-items: center;
+      justify-content: center;
+      /* A default background to override in .success/.error */
+      background-color: rgba(0, 0, 0, 0.8);
+      text-align: center;
+      padding: 20px;
+      cursor: pointer; /* Let user know they can click/tap */
+    }
+
+    /* Success (green) full-screen overlay */
+    #overlay.success {
+      background-color: rgba(76, 175, 80, 0.95); /* Green-ish */
+    }
+
+    /* Error (red) full-screen overlay */
+    #overlay.error {
+      background-color: rgba(244, 67, 54, 0.95); /* Red-ish */
+    }
+
+    /* Overlay text content */
+    #overlay-content {
+      color: #fff;
+      font-size: 2rem;
+      font-weight: bold;
+      max-width: 90%;
+    }
+
+    /* Make sure input and text scale on small screens */
+    @media (max-width: 600px) {
+      input[type="text"] {
+        font-size: 1rem;
+      }
+      #overlay-content {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>Parcel Sorting</h1>
 
+  <h1>Parcel Sorting - Two Step</h1>
   <div id="app">
-    <p>Scan or type the package code here:</p>
-    <input type="text" id="barcode-input" autofocus />
-
-    <div id="result">Waiting for scan...</div>
+    <p>Current Step: <strong id="current-step">Scan Package</strong></p>
+    <input
+      type="text"
+      id="scanner-input"
+      placeholder="Scan here..."
+      autofocus
+    />
+    <div id="message" class="info">
+      Please scan the package barcode.
+    </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- Fullscreen overlay (initially hidden) -->
+  <div id="overlay">
+    <div id="overlay-content">Message goes here</div>
+  </div>
+
+  <!-- Success and Error sounds (optional) -->
+  <audio id="success-sound" src="success.mp3" preload="auto"></audio>
+  <audio id="error-sound" src="error.mp3" preload="auto"></audio>
+
+  <!-- Firebase + Your Sorting Script -->
+  <script type="module">
+    /***********************************************
+     * 1. Firebase Setup
+     ***********************************************/
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+
+    // Replace with your actual Firebase config:
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
+      authDomain: "boxr-parcel-sorter.firebaseapp.com",
+      projectId: "boxr-parcel-sorter",
+      storageBucket: "boxr-parcel-sorter.firebasestorage.app",
+      messagingSenderId: "615746259085",
+      appId: "1:615746259085:web:b6f7cba3edf84901bcfac4"
+    };
+
+    // Initialize Firebase and Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    /***********************************************
+     * 2. Parcel Sorting Logic
+     ***********************************************/
+    // Carrier Config
+    const carriers = [
+      { prefix: "0034", name: "DHL", bin: "1050" },
+      { prefix: "8064", name: "GLS", bin: "1070" },
+      // Add more carriers here
+    ];
+
+    // State
+    let currentStep = "scanPackage"; // "scanPackage" or "scanBin"
+    let expectedBin = null;
+
+    // DOM Elements
+    const scannerInput = document.getElementById("scanner-input");
+    const messageDiv = document.getElementById("message");
+    const currentStepLabel = document.getElementById("current-step");
+    const overlay = document.getElementById("overlay");
+    const overlayContent = document.getElementById("overlay-content");
+
+    const successSound = document.getElementById("success-sound");
+    const errorSound = document.getElementById("error-sound");
+
+    let overlayHideTimeoutId = null;
+
+    // Event Listeners
+    scannerInput.addEventListener("change", handleScan);
+    overlay.addEventListener("click", () => {
+      hideOverlay();
+    });
+
+    // Handle Scans
+    async function handleScan() {
+      const code = scannerInput.value.trim();
+      // Clear input for next
+      scannerInput.value = "";
+
+      if (!code) return;
+
+      if (currentStep === "scanPackage") {
+        handlePackageScan(code);
+      } else if (currentStep === "scanBin") {
+        handleBinScan(code);
+      }
+    }
+
+    // Step 1: Scan Package
+    async function handlePackageScan(barcode) {
+      const carrier = carriers.find(c => barcode.startsWith(c.prefix));
+
+      if (!carrier) {
+        showMessage("ERROR: Unknown carrier!", false);
+        showOverlay("Unknown carrier!", false);
+        return;
+      }
+
+      expectedBin = carrier.bin;
+
+      showMessage(`Package: ${carrier.name}. Please scan bin ${carrier.bin}.`, true);
+      showOverlay(`Package: ${carrier.name}. Now scan bin ${carrier.bin}...`, true);
+
+      currentStep = "scanBin";
+      updateStepLabel();
+
+      // (Optional) Save to Firestore
+      try {
+        await addDoc(collection(db, "scans"), {
+          trackingNumber: barcode,
+          carrier: carrier.name,
+          bin: carrier.bin,
+          step: "packageScan",
+          timestamp: Date.now()
+        });
+      } catch (err) {
+        console.error("Error saving package scan:", err);
+      }
+    }
+
+    // Step 2: Scan Bin
+    async function handleBinScan(scannedBin) {
+      if (scannedBin === expectedBin) {
+        // Correct bin
+        showMessage("Correct Bin! Sorting Complete.", true);
+        showOverlay("Correct Bin! Sorting Complete.", true);
+
+        // (Optional) Save to Firestore
+        try {
+          await addDoc(collection(db, "scans"), {
+            bin: scannedBin,
+            step: "binScan",
+            status: "correct",
+            timestamp: Date.now()
+          });
+        } catch (err) {
+          console.error("Error saving bin scan:", err);
+        }
+      } else {
+        // Wrong bin
+        showMessage(`ERROR: Wrong bin! Expected ${expectedBin}.`, false);
+        showOverlay(`Wrong bin! Expected ${expectedBin}...`, false);
+
+        // (Optional) Save to Firestore
+        try {
+          await addDoc(collection(db, "scans"), {
+            bin: scannedBin,
+            step: "binScan",
+            status: "incorrect",
+            expected: expectedBin,
+            timestamp: Date.now()
+          });
+        } catch (err) {
+          console.error("Error saving wrong bin scan:", err);
+        }
+
+        // Remain in "scanBin" to retry
+        return;
+      }
+
+      // Reset
+      currentStep = "scanPackage";
+      expectedBin = null;
+      updateStepLabel();
+    }
+
+    // UI: Show bottom message
+    function showMessage(msg, isSuccess) {
+      messageDiv.textContent = msg;
+      messageDiv.classList.remove("info"); 
+      if (isSuccess) {
+        messageDiv.style.backgroundColor = "#4CAF50"; // green
+        messageDiv.style.color = "#fff";
+        playSuccessSound();
+      } else {
+        messageDiv.style.backgroundColor = "#f44336"; // red
+        messageDiv.style.color = "#fff";
+        playErrorSound();
+      }
+    }
+
+    // UI: Show Fullscreen Overlay
+    function showOverlay(msg, isSuccess) {
+      if (overlayHideTimeoutId) {
+        clearTimeout(overlayHideTimeoutId);
+      }
+      overlay.classList.remove("success", "error");
+
+      if (isSuccess) {
+        overlay.classList.add("success");
+        playSuccessSound();
+      } else {
+        overlay.classList.add("error");
+        playErrorSound();
+      }
+
+      overlayContent.textContent = msg;
+      overlay.style.display = "flex";
+
+      // Auto-hide after 2 seconds
+      overlayHideTimeoutId = setTimeout(() => {
+        hideOverlay();
+      }, 2000);
+    }
+
+    function hideOverlay() {
+      overlay.style.display = "none";
+    }
+
+    function updateStepLabel() {
+      currentStepLabel.textContent = 
+        (currentStep === "scanPackage") ? "Scan Package" : "Scan Bin";
+    }
+
+    function playSuccessSound() {
+      successSound.currentTime = 0;
+      successSound.play().catch(err => console.log("Success Sound Error:", err));
+    }
+
+    function playErrorSound() {
+      errorSound.currentTime = 0;
+      errorSound.play().catch(err => console.log("Error Sound Error:", err));
+    }
+  </script>
+
 </body>
 </html>
