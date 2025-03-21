@@ -66,6 +66,7 @@
       background-color: rgba(0, 0, 0, 0.8);
       text-align: center;
       padding: 20px;
+      cursor: pointer; /* Let user know they can click/tap */
     }
 
     /* Success (green) full-screen overlay */
@@ -144,8 +145,16 @@
     const successSound = document.getElementById("success-sound");
     const errorSound = document.getElementById("error-sound");
 
+    // Will store the timeout ID so we can clear it if needed
+    let overlayHideTimeoutId = null;
+
     // 4. Set up event listener for scanning (change event or key event)
     scannerInput.addEventListener("change", handleScan);
+
+    // Also allow the user to tap/click on overlay to close it immediately
+    overlay.addEventListener("click", () => {
+      hideOverlay();
+    });
 
     function handleScan() {
       const code = scannerInput.value.trim();
@@ -219,6 +228,11 @@
 
     // 7. UI Helper: Show Fullscreen Overlay
     function showOverlay(msg, isSuccess) {
+      // Clear any previous hide timeouts so we don't stack them
+      if (overlayHideTimeoutId) {
+        clearTimeout(overlayHideTimeoutId);
+      }
+
       // Reset classes
       overlay.classList.remove("success", "error");
 
@@ -235,10 +249,15 @@
       // Display the overlay
       overlay.style.display = "flex";
 
-      // Hide after 2 seconds (or adjust to your preference)
-      setTimeout(() => {
-        overlay.style.display = "none";
+      // Hide after 2 seconds (adjust this duration as needed)
+      overlayHideTimeoutId = setTimeout(() => {
+        hideOverlay();
       }, 2000);
+    }
+
+    // 7b. Helper to hide the overlay
+    function hideOverlay() {
+      overlay.style.display = "none";
     }
 
     function updateStepLabel() {
