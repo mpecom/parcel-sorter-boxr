@@ -1,1 +1,31 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+#app {
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+#barcode-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1.1rem;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+#result {
+  font-size: 1.2rem;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  min-height: 50px;
+  margin-top: 1rem;
+}
 
