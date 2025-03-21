@@ -63,3 +63,22 @@ async function handleScan() {
   // Clear
   barcodeInput.value = "";
 }
+
+import { onSnapshot, collection, orderBy, query } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+
+// At the bottom, after everything
+const scansList = document.getElementById("scans-list");
+
+// Real-time listener to Firestore
+const q = query(collection(db, "scans"), orderBy("timestamp", "desc"));
+onSnapshot(q, (snapshot) => {
+  // Clear the list
+  scansList.innerHTML = "";
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const li = document.createElement("li");
+    li.textContent = `[${new Date(data.timestamp).toLocaleString()}] ${data.carrier} - ${data.trackingNumber} - Bin: ${data.bin}`;
+    scansList.appendChild(li);
+  });
+});
+
