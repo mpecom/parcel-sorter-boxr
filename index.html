@@ -217,7 +217,7 @@
 <body>
   <div class="container">
     <header>
-      <img id="logo" src="https://cdn.shopify.com/s/files/1/0596/0197/7522/files/LG_BOXR_RGB-WHITE.png?v=1742598360" alt="BOXR Logo">
+      <img id="logo" src="https://cdn.shopify.com/s/files/1/0596/0197/7522/files/LG_BOXR_RGB.png?v=1742596684" alt="BOXR Logo">
       <h1>BOXR Parcel Sorter</h1>
     </header>
 
@@ -300,7 +300,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, setDoc, getDoc, doc, query, orderBy, onSnapshot, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, setDoc, getDoc, doc, query, orderBy, onSnapshot, getDocs, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
@@ -791,7 +791,9 @@
       await addDoc(collection(db, "csvExports"), {
         fileName: fileName,
         url: url,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        archived: false,
+        isAutomatic: false
       });
 
       const a = document.createElement("a");
@@ -804,11 +806,18 @@
 
     async function loadCsvExports() {
       const snap = await getDocs(csvQuery);
-      csvData = snap.docs.map(doc => doc.data());
+      csvData = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(d => !d.archived); // Only show non-archived exports
 
-      // Filter to keep only the last 30 days
+      // Check for archiving on load (as a backup)
       const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-      csvData = csvData.filter(d => d.timestamp >= thirtyDaysAgo);
+      snap.forEach(async (docSnap) => {
+        const data = docSnap.data();
+        if (data.timestamp < thirtyDaysAgo && !data.archived) {
+          await updateDoc(docSnap.ref, { archived: true });
+        }
+      });
 
       renderCsvList();
     }
