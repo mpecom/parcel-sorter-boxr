@@ -5,6 +5,34 @@
   <title>Parcel Sorting App</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles.css" />
+  
+  <!-- In your index.html HEAD, below <title> and above your scripts -->
+<script type="module">
+  // Import Firebase modules
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+
+  // You can import Auth, etc. if needed
+  // import { getAuth, signInAnonymously, ... } from ...
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
+    authDomain: "boxr-parcel-sorter.firebaseapp.com",
+    projectId: "boxr-parcel-sorter",
+    storageBucket: "boxr-parcel-sorter.firebasestorage.app",
+    messagingSenderId: "615746259085",
+    appId: "1:615746259085:web:b6f7cba3edf84901bcfac4"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // Make db available in global scope
+  window._firebaseDb = db;
+</script>
+
 </head>
 <body>
   <h1>Parcel Sorting</h1>
