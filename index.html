@@ -9,11 +9,13 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
   <!-- JsBarcode for barcode generation -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-
-  <!-- Optionally, if you'd like a QR code library -->
+  <!-- QRious for QR code generation -->
   <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+  <!-- jsPDF for PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
+    /* [Previous styles remain unchanged] */
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
@@ -23,8 +25,6 @@
       text-align: center;
       margin-bottom: 0.75rem;
     }
-
-    /* Container for scanning section */
     #app {
       max-width: 600px;
       margin: 1rem auto;
@@ -34,7 +34,6 @@
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-
     input[type="text"] {
       width: 100%;
       padding: 10px;
@@ -42,7 +41,6 @@
       box-sizing: border-box;
       margin-top: 0.5rem;
     }
-
     #message {
       margin-top: 20px;
       font-size: 1.4rem;
@@ -56,13 +54,10 @@
       border-radius: 5px;
       padding: 0.5rem;
     }
-
     .info {
       background-color: #3b82f6;
       color: #fff;
     }
-
-    /* Fullscreen overlay styling */
     #overlay {
       display: none;
       position: fixed;
@@ -80,10 +75,10 @@
       cursor: pointer;
     }
     #overlay.success {
-      background-color: rgba(34,197,94,0.95); /* Tailwind green-500-ish */
+      background-color: rgba(34,197,94,0.95);
     }
     #overlay.error {
-      background-color: rgba(244,63,94,0.95); /* Tailwind red-500-ish */
+      background-color: rgba(244,63,94,0.95);
     }
     #overlay-content {
       color: #fff;
@@ -91,8 +86,6 @@
       font-weight: bold;
       max-width: 90%;
     }
-
-    /* Bin Management Panel */
     #bin-management {
       max-width: 600px;
       margin: 1rem auto;
@@ -111,8 +104,6 @@
       margin-top: 15px;
       font-size: 0.9rem;
     }
-
-    /* Chart & CSV Export */
     #chart-container {
       max-width: 800px;
       margin: 1rem auto;
@@ -127,7 +118,6 @@
       max-height: 400px;
       margin: 1rem auto;
     }
-
     #exportBtn {
       margin: 1rem auto;
       display: inline-block;
@@ -142,8 +132,6 @@
     #exportBtn:hover {
       background-color: #2563eb;
     }
-
-    /* Scans list */
     #scans-list {
       list-style: none;
       padding: 0;
@@ -156,31 +144,21 @@
       padding: 4px 0;
       font-size: 0.9rem;
     }
-
-    /* Label Modal or Canvas could be here if needed. */
   </style>
 </head>
 <body>
-
+  <!-- [HTML body content remains unchanged] -->
   <h1>Parcel Sorting - Enhanced Bins + UI (Debugged)</h1>
-
-  <!-- 1. Two-Step Scanning UI -->
   <div id="app">
     <p>Current Step: <strong id="current-step">Scan Package</strong></p>
     <input type="text" id="scanner-input" placeholder="Scan here..." autofocus />
     <div id="message" class="info">Please scan the package barcode.</div>
   </div>
-
-  <!-- Fullscreen overlay (initially hidden) -->
   <div id="overlay">
     <div id="overlay-content">Message goes here</div>
   </div>
-
-  <!-- Audio feedback -->
   <audio id="success-sound" src="success.mp3" preload="auto"></audio>
   <audio id="error-sound" src="error.mp3" preload="auto"></audio>
-
-  <!-- 2. Bin Management -->
   <h2>Bin Management</h2>
   <div id="bin-management">
     <select id="carrier-select">
@@ -198,8 +176,6 @@
     </div>
     <div id="current-bins">Select a carrier to see current bins</div>
   </div>
-
-  <!-- 3. Analytics Section -->
   <h2>Scans Analytics</h2>
   <div id="chart-container">
     <canvas id="myChart"></canvas>
@@ -228,11 +204,6 @@
       runTransaction
     } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
 
-    // If your code is not clear about what to do when the doc doesn't exist,
-    // please clarify in the chat: do we create it automatically, or do we want
-    // to stop and show an error? We'll assume we create it automatically.
-
-    // FIXME: Replace with your actual Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
       authDomain: "boxr-parcel-sorter.firebaseapp.com",
@@ -248,47 +219,18 @@
     /*************************************************************
      * B. Carriers & Two-Step Logic
      *************************************************************/
-    // We'll keep carriers in a static array for prefix detection.
-    // For the doc-based counters, we expect a doc in 'carriers/{carrierName}'
-    // with at least { binCounter: 1 } or 0.
-
     const carriers = [
-      {
-        name: "DHL Paket",
-        prefixes: ["8064"],
-        logo: "logos/dhl_paket.png"
-      },
-      {
-        name: "DHL NL",
-        prefixes: ["JVGL"],
-        logo: "logos/dhl_nl.png"
-      },
-      {
-        name: "Correos Express",
-        prefixes: ["PKANF"],
-        logo: "logos/correos_express.png"
-      },
-      {
-        name: "BPOST",
-        prefixes: ["323201"],
-        logo: "logos/bpost.png"
-      },
-      {
-        name: "Colis Prive",
-        prefixes: ["Q788", "R153"],
-        logo: "logos/colis_prive.png"
-      },
-      {
-        name: "DPD",
-        prefixes: ["0522"],
-        logo: "logos/dpd.png"
-      }
+      { name: "DHL Paket", prefixes: ["8064"], logo: "logos/dhl_paket.png" },
+      { name: "DHL NL", prefixes: ["JVGL"], logo: "logos/dhl_nl.png" },
+      { name: "Correos Express", prefixes: ["PKANF"], logo: "logos/correos_express.png" },
+      { name: "BPOST", prefixes: ["323201"], logo: "logos/bpost.png" },
+      { name: "Colis Prive", prefixes: ["Q788", "R153"], logo: "logos/colis_prive.png" },
+      { name: "DPD", prefixes: ["0522"], logo: "logos/dpd.png" }
     ];
 
     let currentStep = "scanPackage";
     let expectedBin = null;
 
-    // DOM refs
     const scannerInput = document.getElementById("scanner-input");
     const messageDiv = document.getElementById("message");
     const currentStepLabel = document.getElementById("current-step");
@@ -303,7 +245,6 @@
 
     let overlayHideTimeoutId = null;
 
-    // 1. Populate carrier dropdown
     carriers.forEach((carrier) => {
       const option = document.createElement("option");
       option.value = carrier.name;
@@ -311,7 +252,6 @@
       carrierSelect.appendChild(option);
     });
 
-    // 2. Add event listeners
     scannerInput.addEventListener("change", handleScan);
     overlay.addEventListener("click", hideOverlay);
     carrierSelect.addEventListener("change", () => {
@@ -332,7 +272,6 @@
       }
     }
 
-    // Step 1: Scan Package => find carrier => get bin => expect bin
     async function handlePackageScan(barcode) {
       const carrier = findCarrierByPrefix(barcode);
       if (!carrier) {
@@ -341,7 +280,6 @@
         return;
       }
 
-      // Attempt to get an open bin, else inform user to create.
       const binCode = await getOpenBinForCarrier(carrier.name);
       if (!binCode) {
         showMessage(`No open bin for ${carrier.name}! Create one.`, false);
@@ -355,7 +293,6 @@
       currentStep = "scanBin";
       updateStepLabel();
 
-      // Save package scan
       try {
         await addDoc(collection(db, "scans"), {
           step: "packageScan",
@@ -369,7 +306,6 @@
       }
     }
 
-    // Step 2: Scan Bin => confirm it matches expectedBin
     async function handleBinScan(scannedBin) {
       if (scannedBin === expectedBin) {
         showMessage("Correct Bin! Sorting Complete.", true);
@@ -418,15 +354,14 @@
       return null;
     }
 
-    // UI Helpers
     function showMessage(msg, isSuccess) {
       messageDiv.textContent = msg;
       messageDiv.classList.remove("info");
       if (isSuccess) {
-        messageDiv.style.backgroundColor = "#34d399"; // green-400
+        messageDiv.style.backgroundColor = "#34d399";
         playSuccessSound();
       } else {
-        messageDiv.style.backgroundColor = "#f87171"; // red-400
+        messageDiv.style.backgroundColor = "#f87171";
         playErrorSound();
       }
     }
@@ -505,13 +440,11 @@
       const carrierName = carrierSelect.value;
       if (!carrierName) return;
 
-      // Attempt to create or update the doc in 'carriers/{carrierName}' if missing.
       try {
         const carrierDocRef = doc(db, "carriers", carrierName);
         const binCode = await runTransaction(db, async (transaction) => {
           const carrierDocSnap = await transaction.get(carrierDocRef);
           let binCounter = 1;
-          // If doc doesn't exist, create it
           if (!carrierDocSnap.exists()) {
             transaction.set(carrierDocRef, { binCounter: 1 });
             binCounter = 1;
@@ -522,12 +455,10 @@
           const binNumberStr = String(binCounter).padStart(4, "0");
           const newBinCode = `${carrierName}-BIN-${binNumberStr}`;
 
-          // increment counter
           transaction.set(carrierDocRef, {
             binCounter: binCounter + 1
           }, { merge: true });
 
-          // create new bin doc
           const newBinDocRef = doc(collection(db, "bins"));
           transaction.set(newBinDocRef, {
             carrier: carrierName,
@@ -547,20 +478,29 @@
     }
 
     function generateBinLabel(carrierName, binCode) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [100, 150] // 10cm x 15cm
+      });
+
+      // Add border
+      doc.setLineWidth(0.5);
+      doc.rect(5, 5, 90, 140);
+
+      // Center text
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      const carrierWidth = doc.getTextWidth(carrierName);
+      doc.text(carrierName, (100 - carrierWidth) / 2, 20);
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "normal");
+      const binWidth = doc.getTextWidth(binCode);
+      doc.text(binCode, (100 - binWidth) / 2, 30);
+
       const labelType = labelTypeSelect.value;
-      const canvas = document.createElement("canvas");
-      canvas.width = 350;
-      canvas.height = 200;
-      const ctx = canvas.getContext("2d");
-
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = "#000";
-      ctx.font = "bold 16px sans-serif";
-      ctx.fillText(carrierName, 10, 20);
-      ctx.font = "14px sans-serif";
-      ctx.fillText(binCode, 10, 40);
 
       if (labelType === "barcode") {
         const barcodeCanvas = document.createElement("canvas");
@@ -571,7 +511,8 @@
           width: 2,
           height: 60
         });
-        ctx.drawImage(barcodeCanvas, 10, 50);
+        const barcodeImg = barcodeCanvas.toDataURL("image/png");
+        doc.addImage(barcodeImg, 'PNG', 10, 40, 80, 40);
       } else {
         const qrCanvas = document.createElement("canvas");
         const qr = new QRious({
@@ -579,13 +520,11 @@
           value: binCode,
           size: 100
         });
-        ctx.drawImage(qrCanvas, 10, 50);
+        const qrImg = qrCanvas.toDataURL("image/png");
+        doc.addImage(qrImg, 'PNG', 25, 40, 50, 50);
       }
 
-      const link = document.createElement("a");
-      link.download = `${binCode}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      doc.save(`${binCode}.pdf`);
     }
 
     async function getOpenBinForCarrier(carrierName) {
@@ -701,16 +640,6 @@
       a.click();
       document.body.removeChild(a);
     });
-
-    /*************************************************************
-     * E. TEST CASES
-     *************************************************************/
-    // 1. Test creating a bin for a carrier doc that doesn't exist.
-    //    Expected behavior: The code automatically creates that doc with binCounter=1, then sets binCounter=2.
-    // 2. Test scanning a known prefix ("8064" = DHL Paket) => expects to find or prompt for a bin.
-    // 3. If doc exists but has no binCounter, the code sets binCounter=1 by default.
-    //
-    // If any of these behaviors are not what's intended, please clarify in the chat.
 
   </script>
 </body>
