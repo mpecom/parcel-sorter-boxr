@@ -11,45 +11,28 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    :root {
-      --primary: #0022ee; /* Updated BOXR blue */
-      --secondary: #34c759;
-      --error: #ff4444;
-      --text: #333333;
-      --background: #ffffff;
-      --card-bg: #f8f9fa;
-      --shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    [data-theme="dark"] {
-      --primary: #3366ff; /* Lighter blue for dark mode */
-      --secondary: #34c759;
-      --error: #ff6666;
-      --text: #ffffff;
-      --background: #1a1a1a;
-      --card-bg: #2d2d2d;
-      --shadow: 0 4px 6px rgba(0,0,0,0.2);
-    }
-
     body {
       font-family: 'Roboto', Arial, sans-serif;
       margin: 0;
-      padding: 20px;
-      background-color: var(--background);
-      color: var(--text);
-      transition: all 0.3s ease;
+      padding: 0;
+      background-color: #f5f7fa;
+      color: #1a1c2e;
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
+      padding: 20px;
     }
 
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 2rem;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #0022ee 0%, #3366ff 100%);
+      color: white;
+      border-radius: 8px 8px 0 0;
     }
 
     #logo {
@@ -57,49 +40,51 @@
       width: auto;
     }
 
-    #theme-toggle {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: var(--text);
-    }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: 8px;
-      padding: 1.5rem;
-      box-shadow: var(--shadow);
-      margin-bottom: 2rem;
-    }
-
     h1 {
       margin: 0;
       font-size: 1.8rem;
-      color: var(--primary);
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+      transition: transform 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
     }
 
     h2 {
       font-size: 1.4rem;
       margin-bottom: 1rem;
-      color: var(--text);
+      color: #0022ee;
     }
 
     input[type="text"] {
       width: 100%;
       padding: 12px;
       font-size: 1.1rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
+      border: 1px solid #e0e4e8;
+      border-radius: 6px;
       box-sizing: border-box;
-      background: var(--background);
-      color: var(--text);
+      background: #f9fafb;
+      color: #1a1c2e;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #0022ee;
+      outline: none;
     }
 
     #message {
       margin-top: 1rem;
       padding: 0.75rem;
-      border-radius: 4px;
+      border-radius: 6px;
       text-align: center;
       font-weight: 500;
       transition: all 0.3s;
@@ -114,7 +99,6 @@
       height: 100%;
       z-index: 9999;
       background-color: rgba(0, 0, 0, 0.8);
-      cursor: pointer;
       align-items: center;
       justify-content: center;
     }
@@ -124,7 +108,7 @@
       font-size: 2rem;
       font-weight: bold;
       padding: 1rem;
-      border-radius: 4px;
+      border-radius: 6px;
       text-align: center;
     }
 
@@ -133,26 +117,27 @@
       gap: 1rem;
       margin: 1rem 0;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     select, button {
-      padding: 8px 16px;
-      border-radius: 4px;
-      border: 1px solid #ddd;
-      background: var(--background);
-      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: none;
+      background: #e0e4e8;
+      color: #1a1c2e;
       cursor: pointer;
+      transition: background 0.3s, transform 0.1s;
     }
 
     button {
-      background: var(--primary);
+      background: #0022ee;
       color: white;
-      border: none;
-      transition: background 0.3s;
     }
 
-    button:hover:not(:disabled) {
-      background: #0019b3; /* Darker shade of #0022ee */
+    button:hover {
+      background: #0019b3;
+      transform: translateY(-1px);
     }
 
     button:disabled {
@@ -160,26 +145,72 @@
       cursor: not-allowed;
     }
 
+    select:hover {
+      background: #d1d5db;
+    }
+
     #analytics-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
       gap: 2rem;
     }
 
     .chart-container {
       position: relative;
-      height: 300px;
+      height: 350px;
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 1rem;
     }
 
     #scans-list {
       list-style: none;
       padding: 0;
       margin: 0;
+      max-height: 300px;
+      overflow-y: auto;
     }
 
     #scans-list li {
-      padding: 0.5rem 0;
-      border-bottom: 1px solid #eee;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #e0e4e8;
+      font-size: 0.95rem;
+      color: #1a1c2e;
+    }
+
+    #csv-section {
+      margin-top: 2rem;
+    }
+
+    #csv-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #csv-list li {
+      padding: 0.75rem;
+      border-bottom: 1px solid #e0e4e8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #csv-list li a {
+      color: #0022ee;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    #csv-list li a:hover {
+      text-decoration: underline;
+    }
+
+    .pagination {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
     }
   </style>
 </head>
@@ -187,11 +218,11 @@
   <div class="container">
     <header>
       <img id="logo" src="https://cdn.shopify.com/s/files/1/0596/0197/7522/files/LG_BOXR_RGB.png?v=1742596684" alt="BOXR Logo">
-      <button id="theme-toggle">🌙</button>
+      <h1>BOXR Parcel Sorter</h1>
     </header>
 
     <div class="card" id="app">
-      <h1>BOXR Parcel Sorter</h1>
+      <h2>Scan Parcels</h2>
       <p>Current Step: <strong id="current-step">Scan Package</strong></p>
       <input type="text" id="scanner-input" placeholder="Scan here..." autofocus />
       <div id="message"></div>
@@ -224,7 +255,7 @@
       <div class="controls">
         <select id="time-filter">
           <option value="all">All Time</option>
-          <option value="24h">Last 24 Hours</option>
+          <option value="today">Today</option>
           <option value="7d">Last 7 Days</option>
           <option value="30d">Last 30 Days</option>
         </select>
@@ -240,12 +271,30 @@
           <canvas id="bins-chart"></canvas>
         </div>
       </div>
-      <button id="exportBtn">Export CSV</button>
     </div>
 
     <div class="card">
       <h2>Recent Scans</h2>
       <ul id="scans-list"></ul>
+    </div>
+
+    <div class="card" id="csv-section">
+      <h2>Export History</h2>
+      <div class="controls">
+        <button id="exportBtn">Export Today's Scans</button>
+        <select id="csv-limit">
+          <option value="5">Show 5</option>
+          <option value="10">Show 10</option>
+          <option value="20">Show 20</option>
+          <option value="all">Show All</option>
+        </select>
+      </div>
+      <ul id="csv-list"></ul>
+      <div class="pagination">
+        <button id="csv-prev" disabled>Previous</button>
+        <span id="csv-page-info"></span>
+        <button id="csv-next" disabled>Next</button>
+      </div>
     </div>
   </div>
 
@@ -276,6 +325,10 @@
 
     let currentStep = "scanPackage";
     let expectedBin = null;
+    let charts = {};
+    let csvData = [];
+    let currentCsvPage = 1;
+    let csvPerPage = 5;
 
     const scannerInput = document.getElementById("scanner-input");
     const messageDiv = document.getElementById("message");
@@ -288,20 +341,16 @@
     const createBinBtn = document.getElementById("create-bin-btn");
     const currentBinsDiv = document.getElementById("current-bins");
     const labelTypeSelect = document.getElementById("label-type-select");
-    const themeToggle = document.getElementById("theme-toggle");
-    const logo = document.getElementById("logo");
     const timeFilter = document.getElementById("time-filter");
     const scansList = document.getElementById("scans-list");
     const exportBtn = document.getElementById("exportBtn");
+    const csvList = document.getElementById("csv-list");
+    const csvLimit = document.getElementById("csv-limit");
+    const csvPrev = document.getElementById("csv-prev");
+    const csvNext = document.getElementById("csv-next");
+    const csvPageInfo = document.getElementById("csv-page-info");
 
     let overlayHideTimeoutId = null;
-    let charts = {};
-
-    // Dark mode toggle
-    themeToggle.addEventListener("click", () => {
-      document.body.dataset.theme = document.body.dataset.theme === "dark" ? "light" : "dark";
-      themeToggle.textContent = document.body.dataset.theme === "dark" ? "☀️" : "🌙";
-    });
 
     // Populate carriers
     carriers.forEach((carrier) => {
@@ -321,6 +370,23 @@
     createBinBtn.addEventListener("click", createNewBin);
     timeFilter.addEventListener("change", updateAnalytics);
     exportBtn.addEventListener("click", exportCSV);
+    csvLimit.addEventListener("change", () => {
+      csvPerPage = csvLimit.value === "all" ? csvData.length : parseInt(csvLimit.value);
+      currentCsvPage = 1;
+      renderCsvList();
+    });
+    csvPrev.addEventListener("click", () => {
+      if (currentCsvPage > 1) {
+        currentCsvPage--;
+        renderCsvList();
+      }
+    });
+    csvNext.addEventListener("click", () => {
+      if (currentCsvPage < Math.ceil(csvData.length / csvPerPage)) {
+        currentCsvPage++;
+        renderCsvList();
+      }
+    });
 
     function handleScan() {
       const code = scannerInput.value.trim();
@@ -415,14 +481,14 @@
 
     function showMessage(msg, isSuccess) {
       messageDiv.textContent = msg;
-      messageDiv.style.backgroundColor = isSuccess ? "var(--secondary)" : "var(--error)";
+      messageDiv.style.backgroundColor = isSuccess ? "#00c4b4" : "#ff6f61";
       messageDiv.style.color = "#fff";
       isSuccess ? playSuccessSound() : playErrorSound();
     }
 
     function showOverlay(msg, isSuccess) {
       if (overlayHideTimeoutId) clearTimeout(overlayHideTimeoutId);
-      overlay.style.backgroundColor = isSuccess ? "rgba(52,199,89,0.95)" : "rgba(255,68,68,0.95)";
+      overlay.style.backgroundColor = isSuccess ? "rgba(0,196,180,0.95)" : "rgba(255,111,97,0.95)";
       overlayContent.textContent = msg;
       overlay.style.display = "flex";
       overlayHideTimeoutId = setTimeout(hideOverlay, 2000);
@@ -553,11 +619,14 @@
 
     const scansQuery = query(collection(db, "scans"), orderBy("timestamp", "desc"));
     const binsQuery = query(collection(db, "bins"), orderBy("createdAt", "desc"));
+    const csvQuery = query(collection(db, "csvExports"), orderBy("timestamp", "desc"));
 
     function filterDataByTime(data, filter) {
       const now = Date.now();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
       const timeFilters = {
-        "24h": 24 * 60 * 60 * 1000,
+        "today": now - todayStart.getTime(),
         "7d": 7 * 24 * 60 * 60 * 1000,
         "30d": 30 * 24 * 60 * 60 * 1000
       };
@@ -593,13 +662,24 @@
           datasets: [{
             label: "Parcels by Carrier",
             data: Object.values(carrierCount),
-            backgroundColor: "var(--primary)"
+            backgroundColor: "#0022ee",
+            borderColor: "#0019b3",
+            borderWidth: 1,
+            borderRadius: 6,
+            barThickness: 20
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          plugins: {
+            legend: { position: 'top', labels: { color: '#1a1c2e', font: { size: 14 } } },
+            title: { display: true, text: 'Parcels by Carrier', color: '#1a1c2e', font: { size: 16 } }
+          },
+          scales: {
+            x: { ticks: { color: '#1a1c2e' }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: '#1a1c2e', stepSize: 1 }, grid: { color: '#e0e4e8' } }
+          }
         }
       });
     }
@@ -620,14 +700,27 @@
           datasets: [{
             label: "Scans per Hour",
             data: hourlyData,
-            borderColor: "var(--primary)",
-            fill: false
+            borderColor: "#ff6f61",
+            backgroundColor: "rgba(255, 111, 97, 0.2)",
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#ff6f61",
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
+            pointRadius: 4
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          plugins: {
+            legend: { position: 'top', labels: { color: '#1a1c2e', font: { size: 14 } } },
+            title: { display: true, text: 'Scans per Hour', color: '#1a1c2e', font: { size: 16 } }
+          },
+          scales: {
+            x: { ticks: { color: '#1a1c2e' }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: '#1a1c2e', stepSize: 1 }, grid: { color: '#e0e4e8' } }
+          }
         }
       });
     }
@@ -640,18 +733,24 @@
 
       if (charts.bins) charts.bins.destroy();
       charts.bins = new Chart(document.getElementById("bins-chart"), {
-        type: "pie",
+        type: "doughnut",
         data: {
           labels: Object.keys(carrierCount),
           datasets: [{
             label: "Bins by Carrier",
             data: Object.values(carrierCount),
-            backgroundColor: ["#0022ee", "#34c759", "#ff4444", "#ffa500", "#9370db", "#00ced1"]
+            backgroundColor: ["#0022ee", "#ff6f61", "#00c4b4", "#f4a261", "#9370db", "#00ced1"],
+            borderWidth: 2,
+            borderColor: "#fff"
           }]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: false
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#1a1c2e', font: { size: 14 } } },
+            title: { display: true, text: 'Bins by Carrier', color: '#1a1c2e', font: { size: 16 } }
+          }
         }
       });
     }
@@ -669,25 +768,75 @@
     }
 
     async function exportCSV() {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
       const snap = await getDocs(scansQuery);
+      const todayScans = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(d => d.timestamp >= todayStart.getTime() && d.timestamp <= todayEnd.getTime());
+
       let csv = "step,carrier,trackingNumber,bin,status,timestamp\n";
-      snap.forEach(doc => {
-        const d = doc.data();
+      todayScans.forEach(d => {
         csv += [d.step || "", d.carrier || "", d.trackingNumber || "", d.bin || "", d.status || "", d.timestamp || ""].join(",") + "\n";
       });
+
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
+      const dateStr = new Date().toISOString().split('T')[0];
+      const fileName = `scans_${dateStr}.csv`;
+
+      await addDoc(collection(db, "csvExports"), {
+        fileName: fileName,
+        url: url,
+        timestamp: Date.now()
+      });
+
       const a = document.createElement("a");
       a.href = url;
-      a.download = "scans.csv";
+      a.download = fileName;
       a.click();
-      document.body.removeChild(a);
+
+      loadCsvExports();
+    }
+
+    async function loadCsvExports() {
+      const snap = await getDocs(csvQuery);
+      csvData = snap.docs.map(doc => doc.data());
+
+      // Filter to keep only the last 30 days
+      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      csvData = csvData.filter(d => d.timestamp >= thirtyDaysAgo);
+
+      renderCsvList();
+    }
+
+    function renderCsvList() {
+      csvList.innerHTML = "";
+      const start = (currentCsvPage - 1) * csvPerPage;
+      const end = csvPerPage === csvData.length ? csvData.length : start + csvPerPage;
+      const paginatedData = csvData.slice(start, end);
+
+      paginatedData.forEach(d => {
+        const li = document.createElement("li");
+        const dateStr = new Date(d.timestamp).toLocaleDateString();
+        li.innerHTML = `<span>${d.fileName} (${dateStr})</span><a href="${d.url}" download>Download</a>`;
+        csvList.appendChild(li);
+      });
+
+      csvPageInfo.textContent = `Page ${currentCsvPage} of ${Math.ceil(csvData.length / csvPerPage)}`;
+      csvPrev.disabled = currentCsvPage === 1;
+      csvNext.disabled = currentCsvPage === Math.ceil(csvData.length / csvPerPage) || csvData.length === 0;
     }
 
     // Initial setup
     updateAnalytics();
+    loadCsvExports();
     onSnapshot(scansQuery, updateAnalytics);
     onSnapshot(binsQuery, updateAnalytics);
+    onSnapshot(csvQuery, loadCsvExports);
   </script>
 </body>
 </html>
