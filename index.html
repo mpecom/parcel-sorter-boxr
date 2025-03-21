@@ -114,6 +114,41 @@
     </div>
   </div>
 
+  <h2>Scanned Items</h2>
+<ul id="scans-list"></ul>
+
+  import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+
+const scansList = document.getElementById("scans-list");
+const scansQuery = query(collection(db, "scans"), orderBy("timestamp", "desc"));
+
+onSnapshot(scansQuery, (snapshot) => {
+  scansList.innerHTML = "";
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const li = document.createElement("li");
+    li.textContent = `${data.carrier || "?"} | ${data.trackingNumber || data.bin} | ${new Date(data.timestamp).toLocaleString()}`;
+    scansList.appendChild(li);
+  });
+});
+
+  let csv = "carrier,trackingNumber,bin,timestamp\n";
+docs.forEach(doc => {
+  const d = doc.data();
+  csv += `${d.carrier},${d.trackingNumber},${d.bin},${d.timestamp}\n`;
+});
+
+  const blob = new Blob([csv], { type: "text/csv" });
+const url = URL.createObjectURL(blob);
+// Create a hidden <a> to download
+const a = document.createElement("a");
+a.href = url;
+a.download = "scans.csv"; // the filename
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+
+
   <!-- Fullscreen overlay (initially hidden) -->
   <div id="overlay">
     <div id="overlay-content">Message goes here</div>
