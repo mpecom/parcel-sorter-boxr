@@ -2,62 +2,109 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Parcel Sorting - Enhanced Bins + UI (Debugged)</title>
+  <title>BOXR Parcel Sorter</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Chart.js for the bar chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
-  <!-- JsBarcode for barcode generation -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-  <!-- QRious for QR code generation -->
   <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-  <!-- jsPDF for PDF generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <style>
-    /* [Previous styles remain unchanged] */
+    :root {
+      --primary: ##0022ee; /* BOXR blue */
+      --secondary: #34c759; /* Success green */
+      --error: #ff4444; /* Error red */
+      --text: #333333;
+      --background: #ffffff;
+      --card-bg: #f8f9fa;
+      --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    [data-theme="dark"] {
+      --primary: #4285f4;
+      --secondary: #34c759;
+      --error: #ff6666;
+      --text: #ffffff;
+      --background: #1a1a1a;
+      --card-bg: #2d2d2d;
+      --shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f9fafb;
+      font-family: 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--background);
+      color: var(--text);
+      transition: all 0.3s ease;
     }
-    h1, h2 {
-      text-align: center;
-      margin-bottom: 0.75rem;
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
     }
-    #app {
-      max-width: 600px;
-      margin: 1rem auto;
-      text-align: center;
-      background-color: #ffffff;
-      padding: 1rem;
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    #logo {
+      max-height: 50px;
+      width: auto;
+    }
+
+    #theme-toggle {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    .card {
+      background: var(--card-bg);
       border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 2rem;
     }
+
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: var(--primary);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+
     input[type="text"] {
       width: 100%;
-      padding: 10px;
-      font-size: 1.2rem;
+      padding: 12px;
+      font-size: 1.1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
       box-sizing: border-box;
-      margin-top: 0.5rem;
+      background: var(--background);
+      color: var(--text);
     }
+
     #message {
-      margin-top: 20px;
-      font-size: 1.4rem;
-      font-weight: bold;
-      min-height: 3rem;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition: background-color 0.3s;
-      color: #fff;
-      border-radius: 5px;
-      padding: 0.5rem;
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: 500;
+      transition: all 0.3s;
     }
-    .info {
-      background-color: #3b82f6;
-      color: #fff;
-    }
+
     #overlay {
       display: none;
       position: fixed;
@@ -70,139 +117,130 @@
       align-items: center;
       justify-content: center;
       background-color: rgba(0, 0, 0, 0.8);
-      text-align: center;
-      padding: 20px;
       cursor: pointer;
     }
-    #overlay.success {
-      background-color: rgba(34,197,94,0.95);
-    }
-    #overlay.error {
-      background-color: rgba(244,63,94,0.95);
-    }
+
     #overlay-content {
       color: #fff;
       font-size: 2rem;
       font-weight: bold;
-      max-width: 90%;
-    }
-    #bin-management {
-      max-width: 600px;
-      margin: 1rem auto;
-      background-color: #ffffff;
       padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    #bin-management select,
-    #bin-management button {
-      padding: 8px;
-      margin: 5px;
-      font-size: 1rem;
-    }
-    #current-bins {
-      margin-top: 15px;
-      font-size: 0.9rem;
-    }
-    #chart-container {
-      max-width: 800px;
-      margin: 1rem auto;
-      background-color: #ffffff;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    #myChart {
-      width: 100%;
-      max-height: 400px;
-      margin: 1rem auto;
-    }
-    #exportBtn {
-      margin: 1rem auto;
-      display: inline-block;
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
-      background-color: #3b82f6;
-      color: #fff;
-      border: none;
       border-radius: 4px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+    }
+
+    select, button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      background: var(--background);
+      color: var(--text);
       cursor: pointer;
     }
-    #exportBtn:hover {
-      background-color: #2563eb;
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      transition: background 0.3s;
     }
-    #scans-list {
-      list-style: none;
-      padding: 0;
-      margin: 1rem auto;
-      max-width: 800px;
-      text-align: left;
+
+    button:hover:not(:disabled) {
+      background: #1557b0;
     }
-    #scans-list li {
-      border-bottom: 1px solid #ddd;
-      padding: 4px 0;
-      font-size: 0.9rem;
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
     }
   </style>
 </head>
 <body>
-  <!-- [HTML body content remains unchanged] -->
-  <h1>Parcel Sorting - Enhanced Bins + UI (Debugged)</h1>
-  <div id="app">
-    <p>Current Step: <strong id="current-step">Scan Package</strong></p>
-    <input type="text" id="scanner-input" placeholder="Scan here..." autofocus />
-    <div id="message" class="info">Please scan the package barcode.</div>
-  </div>
-  <div id="overlay">
-    <div id="overlay-content">Message goes here</div>
-  </div>
-  <audio id="success-sound" src="success.mp3" preload="auto"></audio>
-  <audio id="error-sound" src="error.mp3" preload="auto"></audio>
-  <h2>Bin Management</h2>
-  <div id="bin-management">
-    <select id="carrier-select">
-      <option value="">Select Carrier</option>
-    </select>
-    <button id="create-bin-btn" disabled>Create New Bin Label</button>
-    <div>
-      <label>
-        Label Type:
+  <div class="container">
+    <header>
+      <img id="logo" src="https://cdn.shopify.com/s/files/1/0596/0197/7522/files/LG_BOXR_RGB.png?v=1742596684" alt="BOXR Logo">
+      <button id="theme-toggle">🌙</button>
+    </header>
+
+    <div class="card" id="app">
+      <h1>BOXR Shipment Sorter</h1>
+      <p>Current Step: <strong id="current-step">Scan Shipments</strong></p>
+      <input type="text" id="scanner-input" placeholder="Scan here..." autofocus />
+      <div id="message"></div>
+    </div>
+
+    <div id="overlay">
+      <div id="overlay-content"></div>
+    </div>
+
+    <audio id="success-sound" src="success.mp3" preload="auto"></audio>
+    <audio id="error-sound" src="error.mp3" preload="auto"></audio>
+
+    <div class="card">
+      <h2>Bin Management</h2>
+      <div class="controls">
+        <select id="carrier-select">
+          <option value="">Select Carrier</option>
+        </select>
+        <button id="create-bin-btn" disabled>Create Bin Label</button>
         <select id="label-type-select">
-          <option value="barcode">Barcode (CODE128)</option>
+          <option value="barcode">Barcode</option>
           <option value="qr">QR Code</option>
         </select>
-      </label>
+      </div>
+      <div id="current-bins">Select a carrier to see current bins</div>
     </div>
-    <div id="current-bins">Select a carrier to see current bins</div>
+
+    <div class="card">
+      <h2>Analytics</h2>
+      <div class="controls">
+        <select id="time-filter">
+          <option value="all">All Time</option>
+          <option value="24h">Last 24 Hours</option>
+          <option value="7d">Last 7 Days</option>
+          <option value="30d">Last 30 Days</option>
+        </select>
+      </div>
+      <div id="analytics-grid">
+        <div class="chart-container">
+          <canvas id="carrier-chart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="scans-per-hour"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="bins-chart"></canvas>
+        </div>
+      </div>
+      <button id="exportBtn">Export CSV</button>
+    </div>
+
+    <div class="card">
+      <h2>Recent Scans</h2>
+      <ul id="scans-list"></ul>
+    </div>
   </div>
-  <h2>Scans Analytics</h2>
-  <div id="chart-container">
-    <canvas id="myChart"></canvas>
-  </div>
-  <button id="exportBtn">Export CSV</button>
-  <ul id="scans-list"></ul>
 
   <script type="module">
-    /*************************************************************
-     * A. Firebase + Firestore Setup
-     *************************************************************/
-    import {
-      initializeApp
-    } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      setDoc,
-      getDoc,
-      doc,
-      query,
-      orderBy,
-      onSnapshot,
-      getDocs,
-      runTransaction
-    } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, setDoc, getDoc, doc, query, orderBy, onSnapshot, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
@@ -216,9 +254,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    /*************************************************************
-     * B. Carriers & Two-Step Logic
-     *************************************************************/
     const carriers = [
       { name: "DHL Paket", prefixes: ["8064"], logo: "logos/dhl_paket.png" },
       { name: "DHL NL", prefixes: ["JVGL"], logo: "logos/dhl_nl.png" },
@@ -231,38 +266,67 @@
     let currentStep = "scanPackage";
     let expectedBin = null;
 
-    const scannerInput = document.getElementById("scanner-input");
-    const messageDiv = document.getElementById("message");
-    const currentStepLabel = document.getElementById("current-step");
-    const overlay = document.getElementById("overlay");
-    const overlayContent = document.getElementById("overlay-content");
-    const successSound = document.getElementById("success-sound");
-    const errorSound = document.getElementById("error-sound");
-    const carrierSelect = document.getElementById("carrier-select");
-    const createBinBtn = document.getElementById("create-bin-btn");
-    const currentBinsDiv = document.getElementById("current-bins");
-    const labelTypeSelect = document.getElementById("label-type-select");
+    const elements = {
+      scannerInput: document.getElementById("scanner-input"),
+      messageDiv: document.getElementById("message"),
+      currentStepLabel: document.getElementById("current-step"),
+      overlay: document.getElementById("overlay"),
+      overlayContent: document.getElementById("overlay-content"),
+      successSound: document.getElementById("success-sound"),
+      errorSound: document.getElementById("error-sound"),
+      carrierSelect: document.getElementById("carrier-select"),
+      createBinBtn: document.getElementById("create-bin-btn"),
+      currentBinsDiv: document.getElementById("current-bins"),
+      labelTypeSelect: document.getElementById("label-type-select"),
+      themeToggle: document.getElementById("theme-toggle"),
+      logo: document.getElementById("logo"),
+      timeFilter: document.getElementById("time-filter"),
+      scansList: document.getElementById("scans-list"),
+      exportBtn: document.getElementById("exportBtn")
+    };
 
     let overlayHideTimeoutId = null;
+    let charts = {};
+
+    // Logo setup (replace with your logo URL or use file input)
+    elements.logo.src = "https://boxrstore.com/path-to-your-logo.png"; // Update this URL
+    // Optional: Add file input for custom logo
+    /*
+    const logoInput = document.createElement("input");
+    logoInput.type = "file";
+    logoInput.accept = "image/*";
+    logoInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) elements.logo.src = URL.createObjectURL(file);
+    });
+    document.querySelector("header").appendChild(logoInput);
+    */
+
+    // Dark mode toggle
+    elements.themeToggle.addEventListener("click", () => {
+      document.body.dataset.theme = document.body.dataset.theme === "dark" ? "light" : "dark";
+      elements.themeToggle.textContent = document.body.dataset.theme === "dark" ? "☀️" : "🌙";
+    });
 
     carriers.forEach((carrier) => {
       const option = document.createElement("option");
       option.value = carrier.name;
       option.textContent = carrier.name;
-      carrierSelect.appendChild(option);
+      elements.carrierSelect.appendChild(option);
     });
 
-    scannerInput.addEventListener("change", handleScan);
-    overlay.addEventListener("click", hideOverlay);
-    carrierSelect.addEventListener("change", () => {
-      createBinBtn.disabled = !carrierSelect.value;
-      loadCarrierBins(carrierSelect.value);
+    elements.scannerInput.addEventListener("change", handleScan);
+    elements.overlay.addEventListener("click", hideOverlay);
+    elements.carrierSelect.addEventListener("change", () => {
+      elements.createBinBtn.disabled = !elements.carrierSelect.value;
+      loadCarrierBins(elements.carrierSelect.value);
     });
-    createBinBtn.addEventListener("click", createNewBin);
+    elements.createBinBtn.addEventListener("click", createNewBin);
+    elements.timeFilter.addEventListener("change", updateAnalytics);
 
     function handleScan() {
-      const code = scannerInput.value.trim();
-      scannerInput.value = "";
+      const code = elements.scannerInput.value.trim();
+      elements.scannerInput.value = "";
       if (!code) return;
 
       if (currentStep === "scanPackage") {
@@ -275,7 +339,7 @@
     async function handlePackageScan(barcode) {
       const carrier = findCarrierByPrefix(barcode);
       if (!carrier) {
-        showMessage("ERROR: Unknown carrier!", false);
+        showMessage("Unknown carrier!", false);
         showOverlay("Unknown carrier!", false);
         return;
       }
@@ -283,58 +347,45 @@
       const binCode = await getOpenBinForCarrier(carrier.name);
       if (!binCode) {
         showMessage(`No open bin for ${carrier.name}! Create one.`, false);
-        showOverlay(`No open bin for ${carrier.name}! Create one.`, false);
+        showOverlay(`No open bin for ${carrier.name}!`, false);
         return;
       }
 
-      showMessage(`Package: ${carrier.name}. Please scan bin ${binCode}.`, true);
-      showOverlay(`Package: ${carrier.name}. Now scan bin ${binCode}...`, true);
+      showMessage(`Package: ${carrier.name}. Scan bin ${binCode}.`, true);
+      showOverlay(`Scan bin ${binCode}...`, true);
       expectedBin = binCode;
       currentStep = "scanBin";
       updateStepLabel();
 
-      try {
-        await addDoc(collection(db, "scans"), {
-          step: "packageScan",
-          carrier: carrier.name,
-          trackingNumber: barcode,
-          bin: binCode,
-          timestamp: Date.now()
-        });
-      } catch (err) {
-        console.error("Error saving package scan:", err);
-      }
+      await addDoc(collection(db, "scans"), {
+        step: "packageScan",
+        carrier: carrier.name,
+        trackingNumber: barcode,
+        bin: binCode,
+        timestamp: Date.now()
+      });
     }
 
     async function handleBinScan(scannedBin) {
       if (scannedBin === expectedBin) {
-        showMessage("Correct Bin! Sorting Complete.", true);
-        showOverlay("Correct Bin! Sorting Complete.", true);
-
-        try {
-          await addDoc(collection(db, "scans"), {
-            step: "binScan",
-            bin: scannedBin,
-            status: "correct",
-            timestamp: Date.now()
-          });
-        } catch (err) {
-          console.error("Error saving bin scan:", err);
-        }
+        showMessage("Sorting Complete!", true);
+        showOverlay("Correct Bin!", true);
+        await addDoc(collection(db, "scans"), {
+          step: "binScan",
+          bin: scannedBin,
+          status: "correct",
+          timestamp: Date.now()
+        });
       } else {
-        showMessage(`ERROR: Wrong bin! Expected ${expectedBin}.`, false);
-        showOverlay(`Wrong bin! Expected ${expectedBin}...`, false);
-        try {
-          await addDoc(collection(db, "scans"), {
-            step: "binScan",
-            bin: scannedBin,
-            status: "incorrect",
-            expected: expectedBin,
-            timestamp: Date.now()
-          });
-        } catch (err) {
-          console.error("Error saving bin error:", err);
-        }
+        showMessage(`Wrong bin! Expected ${expectedBin}.`, false);
+        showOverlay(`Wrong bin! Expected ${expectedBin}`, false);
+        await addDoc(collection(db, "scans"), {
+          step: "binScan",
+          bin: scannedBin,
+          status: "incorrect",
+          expected: expectedBin,
+          timestamp: Date.now()
+        });
         return;
       }
 
@@ -344,137 +395,86 @@
     }
 
     function findCarrierByPrefix(barcode) {
-      for (const c of carriers) {
-        for (const pfx of c.prefixes) {
-          if (barcode.startsWith(pfx)) {
-            return c;
-          }
-        }
-      }
-      return null;
+      return carriers.find(c => c.prefixes.some(pfx => barcode.startsWith(pfx))) || null;
     }
 
     function showMessage(msg, isSuccess) {
-      messageDiv.textContent = msg;
-      messageDiv.classList.remove("info");
-      if (isSuccess) {
-        messageDiv.style.backgroundColor = "#34d399";
-        playSuccessSound();
-      } else {
-        messageDiv.style.backgroundColor = "#f87171";
-        playErrorSound();
-      }
+      elements.messageDiv.textContent = msg;
+      elements.messageDiv.style.backgroundColor = isSuccess ? "var(--secondary)" : "var(--error)";
+      elements.messageDiv.style.color = "#fff";
+      isSuccess ? playSuccessSound() : playErrorSound();
     }
 
     function showOverlay(msg, isSuccess) {
-      if (overlayHideTimeoutId) {
-        clearTimeout(overlayHideTimeoutId);
-      }
-      overlay.classList.remove("success", "error");
-
-      if (isSuccess) {
-        overlay.classList.add("success");
-        playSuccessSound();
-      } else {
-        overlay.classList.add("error");
-        playErrorSound();
-      }
-
-      overlayContent.textContent = msg;
-      overlay.style.display = "flex";
-
-      overlayHideTimeoutId = setTimeout(() => {
-        hideOverlay();
-      }, 2000);
+      if (overlayHideTimeoutId) clearTimeout(overlayHideTimeoutId);
+      elements.overlay.style.backgroundColor = isSuccess ? "rgba(52,199,89,0.95)" : "rgba(255,68,68,0.95)";
+      elements.overlayContent.textContent = msg;
+      elements.overlay.style.display = "flex";
+      overlayHideTimeoutId = setTimeout(hideOverlay, 2000);
+      isSuccess ? playSuccessSound() : playErrorSound();
     }
 
     function hideOverlay() {
-      overlay.style.display = "none";
+      elements.overlay.style.display = "none";
     }
 
     function updateStepLabel() {
-      currentStepLabel.textContent =
-        currentStep === "scanPackage" ? "Scan Package" : "Scan Bin";
+      elements.currentStepLabel.textContent = currentStep === "scanPackage" ? "Scan Package" : "Scan Bin";
     }
 
     function playSuccessSound() {
-      if (successSound) {
-        successSound.currentTime = 0;
-        successSound.play().catch(() => {});
-      }
+      elements.successSound?.currentTime = 0;
+      elements.successSound?.play().catch(() => {});
     }
 
     function playErrorSound() {
-      if (errorSound) {
-        errorSound.currentTime = 0;
-        errorSound.play().catch(() => {});
-      }
+      elements.errorSound?.currentTime = 0;
+      elements.errorSound?.play().catch(() => {});
     }
-
-    /*************************************************************
-     * C. Bin Management with Firestore to avoid duplicates
-     *************************************************************/
 
     async function loadCarrierBins(carrierName) {
       if (!carrierName) {
-        currentBinsDiv.innerHTML = "Select a carrier to see current bins";
+        elements.currentBinsDiv.innerHTML = "Select a carrier to see current bins";
         return;
       }
-      let html = `<strong>Current Bins for ${carrierName}:</strong><br>`;
       const binsSnap = await getDocs(collection(db, "bins"));
+      let html = `<strong>${carrierName} Bins:</strong><br>`;
       let found = false;
       binsSnap.forEach(docSnap => {
         const data = docSnap.data();
         if (data.carrier === carrierName) {
           found = true;
-          html += `${data.binCode}<br>`;
+          html += `${data.binCode} (${data.isFull ? 'Full' : 'Open'})<br>`;
         }
       });
-      if (!found) {
-        html += "<em>No bins yet</em>";
-      }
-      currentBinsDiv.innerHTML = html;
+      elements.currentBinsDiv.innerHTML = found ? html : `${html}<em>No bins yet</em>`;
     }
 
     async function createNewBin() {
-      const carrierName = carrierSelect.value;
+      const carrierName = elements.carrierSelect.value;
       if (!carrierName) return;
 
-      try {
-        const carrierDocRef = doc(db, "carriers", carrierName);
-        const binCode = await runTransaction(db, async (transaction) => {
-          const carrierDocSnap = await transaction.get(carrierDocRef);
-          let binCounter = 1;
-          if (!carrierDocSnap.exists()) {
-            transaction.set(carrierDocRef, { binCounter: 1 });
-            binCounter = 1;
-          } else {
-            binCounter = carrierDocSnap.data().binCounter || 1;
-          }
+      const carrierDocRef = doc(db, "carriers", carrierName);
+      const binCode = await runTransaction(db, async (transaction) => {
+        const carrierDocSnap = await transaction.get(carrierDocRef);
+        let binCounter = carrierDocSnap.exists() ? (carrierDocSnap.data().binCounter || 1) : 1;
+        const binNumberStr = String(binCounter).padStart(4, "0");
+        const newBinCode = `${carrierName}-BIN-${binNumberStr}`;
 
-          const binNumberStr = String(binCounter).padStart(4, "0");
-          const newBinCode = `${carrierName}-BIN-${binNumberStr}`;
-
-          transaction.set(carrierDocRef, {
-            binCounter: binCounter + 1
-          }, { merge: true });
-
-          const newBinDocRef = doc(collection(db, "bins"));
-          transaction.set(newBinDocRef, {
-            carrier: carrierName,
-            binCode: newBinCode,
-            isFull: false,
-            createdAt: Date.now()
-          });
-
-          return newBinCode;
+        transaction.set(carrierDocRef, { binCounter: binCounter + 1 }, { merge: true });
+        const newBinDocRef = doc(collection(db, "bins"));
+        transaction.set(newBinDocRef, {
+          carrier: carrierName,
+          binCode: newBinCode,
+          isFull: false,
+          createdAt: Date.now()
         });
 
-        generateBinLabel(carrierName, binCode);
-        loadCarrierBins(carrierName);
-      } catch (err) {
-        console.error("Error creating new bin:", err);
-      }
+        return newBinCode;
+      });
+
+      generateBinLabel(carrierName, binCode);
+      loadCarrierBins(carrierName);
     }
 
     function generateBinLabel(carrierName, binCode) {
@@ -482,46 +482,27 @@
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: [100, 150] // 10cm x 15cm
+        format: [100, 150]
       });
 
-      // Add border
       doc.setLineWidth(0.5);
       doc.rect(5, 5, 90, 140);
-
-      // Center text
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      const carrierWidth = doc.getTextWidth(carrierName);
-      doc.text(carrierName, (100 - carrierWidth) / 2, 20);
-
+      doc.text(carrierName, (100 - doc.getTextWidth(carrierName)) / 2, 20);
       doc.setFontSize(14);
       doc.setFont("helvetica", "normal");
-      const binWidth = doc.getTextWidth(binCode);
-      doc.text(binCode, (100 - binWidth) / 2, 30);
+      doc.text(binCode, (100 - doc.getTextWidth(binCode)) / 2, 30);
 
-      const labelType = labelTypeSelect.value;
-
+      const labelType = elements.labelTypeSelect.value;
       if (labelType === "barcode") {
         const barcodeCanvas = document.createElement("canvas");
-        JsBarcode(barcodeCanvas, binCode, {
-          format: "CODE128",
-          displayValue: true,
-          fontSize: 14,
-          width: 2,
-          height: 60
-        });
-        const barcodeImg = barcodeCanvas.toDataURL("image/png");
-        doc.addImage(barcodeImg, 'PNG', 10, 40, 80, 40);
+        JsBarcode(barcodeCanvas, binCode, { format: "CODE128", displayValue: true, fontSize: 14, width: 2, height: 60 });
+        doc.addImage(barcodeCanvas.toDataURL("image/png"), 'PNG', 10, 40, 80, 40);
       } else {
         const qrCanvas = document.createElement("canvas");
-        const qr = new QRious({
-          element: qrCanvas,
-          value: binCode,
-          size: 100
-        });
-        const qrImg = qrCanvas.toDataURL("image/png");
-        doc.addImage(qrImg, 'PNG', 25, 40, 50, 50);
+        new QRious({ element: qrCanvas, value: binCode, size: 100 });
+        doc.addImage(qrCanvas.toDataURL("image/png"), 'PNG', 25, 40, 50, 50);
       }
 
       doc.save(`${binCode}.pdf`);
@@ -533,114 +514,150 @@
       let latestCreated = -1;
       binsSnap.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data.carrier === carrierName && data.isFull === false) {
-          if (data.createdAt > latestCreated) {
-            latestCreated = data.createdAt;
-            chosenBin = data.binCode;
-          }
+        if (data.carrier === carrierName && !data.isFull && data.createdAt > latestCreated) {
+          latestCreated = data.createdAt;
+          chosenBin = data.binCode;
         }
       });
       return chosenBin;
     }
 
-    /*************************************************************
-     * D. Real-Time Analytics
-     *************************************************************/
-    const scansList = document.getElementById("scans-list");
-    const exportBtn = document.getElementById("exportBtn");
-    let myChart;
-
     const scansQuery = query(collection(db, "scans"), orderBy("timestamp", "desc"));
-    onSnapshot(scansQuery, (snapshot) => {
-      const allScans = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      renderChart(allScans);
-      renderScansList(allScans);
-    });
+    const binsQuery = query(collection(db, "bins"), orderBy("createdAt", "desc"));
 
-    function renderChart(scans) {
-      const packageScans = scans.filter((s) => s.step === "packageScan");
-      const carrierCountMap = {};
-      packageScans.forEach((s) => {
-        const c = s.carrier || "Unknown";
-        carrierCountMap[c] = (carrierCountMap[c] || 0) + 1;
-      });
+    function filterDataByTime(data, filter) {
+      const now = Date.now();
+      const timeFilters = {
+        "24h": 24 * 60 * 60 * 1000,
+        "7d": 7 * 24 * 60 * 60 * 1000,
+        "30d": 30 * 24 * 60 * 60 * 1000
+      };
+      return filter === "all" ? data : data.filter(d => now - d.timestamp <= timeFilters[filter]);
+    }
 
-      if (myChart) {
-        myChart.destroy();
-      }
-      const ctx = document.getElementById("myChart").getContext("2d");
-      myChart = new Chart(ctx, {
+    async function updateAnalytics() {
+      const scansSnap = await getDocs(scansQuery);
+      const binsSnap = await getDocs(binsQuery);
+      const allScans = scansSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const allBins = binsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const filteredScans = filterDataByTime(allScans, elements.timeFilter.value);
+      const filteredBins = filterDataByTime(allBins, elements.timeFilter.value);
+
+      renderCarrierChart(filteredScans);
+      renderScansPerHourChart(filteredScans);
+      renderBinsChart(filteredBins);
+      renderScansList(filteredScans);
+    }
+
+    function renderCarrierChart(scans) {
+      const packageScans = scans.filter(s => s.step === "packageScan");
+      const carrierCount = packageScans.reduce((acc, s) => {
+        acc[s.carrier] = (acc[s.carrier] || 0) + 1;
+        return acc;
+      }, {});
+
+      if (charts.carrier) charts.carrier.destroy();
+      charts.carrier = new Chart(document.getElementById("carrier-chart"), {
         type: "bar",
         data: {
-          labels: Object.keys(carrierCountMap),
-          datasets: [
-            {
-              label: "Parcel Count (by carrier)",
-              data: Object.values(carrierCountMap),
-              backgroundColor: [
-                "#2196F3",
-                "#4CAF50",
-                "#FF9800",
-                "#9C27B0",
-                "#E91E63",
-                "#8BC34A",
-              ],
-              borderWidth: 1,
-            },
-          ],
+          labels: Object.keys(carrierCount),
+          datasets: [{
+            label: "Parcels by Carrier",
+            data: Object.values(carrierCount),
+            backgroundColor: "var(--primary)"
+          }]
         },
         options: {
           responsive: true,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                stepSize: 1,
-              },
-            },
-          },
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    function renderScansPerHourChart(scans) {
+      const packageScans = scans.filter(s => s.step === "packageScan");
+      const hourlyData = packageScans.reduce((acc, s) => {
+        const hour = new Date(s.timestamp).getHours();
+        acc[hour] = (acc[hour] || 0) + 1;
+        return acc;
+      }, Array(24).fill(0));
+
+      if (charts.scansPerHour) charts.scansPerHour.destroy();
+      charts.scansPerHour = new Chart(document.getElementById("scans-per-hour"), {
+        type: "line",
+        data: {
+          labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+          datasets: [{
+            label: "Scans per Hour",
+            data: hourlyData,
+            borderColor: "var(--primary)",
+            fill: false
+          }]
         },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    }
+
+    function renderBinsChart(bins) {
+      const carrierCount = bins.reduce((acc, b) => {
+        acc[b.carrier] = (acc[b.carrier] || 0) + 1;
+        return acc;
+      }, {});
+
+      if (charts.bins) charts.bins.destroy();
+      charts.bins = new Chart(document.getElementById("bins-chart"), {
+        type: "pie",
+        data: {
+          labels: Object.keys(carrierCount),
+          datasets: [{
+            label: "Bins by Carrier",
+            data: Object.values(carrierCount),
+            backgroundColor: ["#1a73e8", "#34c759", "#ff4444", "#ffa500", "#9370db", "#00ced1"]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
       });
     }
 
     function renderScansList(scans) {
-      scansList.innerHTML = "";
-      scans.forEach((s) => {
+      elements.scansList.innerHTML = "";
+      scans.forEach(s => {
         const li = document.createElement("li");
         const timeStr = new Date(s.timestamp).toLocaleString();
-        if (s.step === "packageScan") {
-          li.textContent = `[${timeStr}] PACKAGE - Carrier: ${s.carrier}, Track#: ${s.trackingNumber}, Bin: ${s.bin}`;
-        } else {
-          li.textContent = `[${timeStr}] BIN - Bin: ${s.bin}, status: ${s.status || "?"}`;
-        }
-        scansList.appendChild(li);
+        li.textContent = s.step === "packageScan" 
+          ? `[${timeStr}] PACKAGE - ${s.carrier}, #${s.trackingNumber}, Bin: ${s.bin}`
+          : `[${timeStr}] BIN - ${s.bin}, ${s.status}`;
+        elements.scansList.appendChild(li);
       });
     }
 
-    exportBtn.addEventListener("click", async () => {
+    elements.exportBtn.addEventListener("click", async () => {
       const snap = await getDocs(scansQuery);
       let csv = "step,carrier,trackingNumber,bin,status,timestamp\n";
-      snap.forEach((doc) => {
+      snap.forEach(doc => {
         const d = doc.data();
-        csv += [
-          d.step || "",
-          d.carrier || "",
-          d.trackingNumber || "",
-          d.bin || "",
-          d.status || "",
-          d.timestamp || ""
-        ].join(",") + "\n";
+        csv += [d.step, d.carrier, d.trackingNumber, d.bin, d.status, d.timestamp].join(",") + "\n";
       });
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = "scans.csv";
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
     });
 
+    // Initial load
+    updateAnalytics();
+    onSnapshot(scansQuery, () => updateAnalytics());
+    onSnapshot(binsQuery, () => updateAnalytics());
   </script>
 </body>
 </html>
