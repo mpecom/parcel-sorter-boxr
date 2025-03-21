@@ -2,258 +2,237 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>BOXR Parcel Sorting</title>
+  <title>Parcel Sorting - Enhanced Bins + UI (Debugged)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- External Libraries -->
+  <!-- Chart.js for the bar chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+  <!-- JsBarcode for barcode generation -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+  <!-- Optionally, if you'd like a QR code library -->
   <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <style>
-    :root {
-      --primary-color: #0a0a23;
-      --accent-color: #8de969;
-      --background: #f4f6f8;
-      --text-dark: #0a0a23;
-      --text-light: #ffffff;
-    }
-
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--background);
-      margin: 0;
-      padding: 0;
-      color: var(--text-dark);
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9fafb;
     }
-
     h1, h2 {
       text-align: center;
-      color: var(--primary-color);
+      margin-bottom: 0.75rem;
     }
 
-    #app, #bin-management, #chart-container, #daily-reports {
-      background: white;
-      max-width: 800px;
+    /* Container for scanning section */
+    #app {
+      max-width: 600px;
       margin: 1rem auto;
-      padding: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      text-align: center;
+      background-color: #ffffff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    input[type="text"], select {
+    input[type="text"] {
       width: 100%;
-      padding: 0.75rem;
-      margin-top: 0.5rem;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
+      padding: 10px;
+      font-size: 1.2rem;
       box-sizing: border-box;
-    }
-
-    button {
-      background-color: var(--primary-color);
-      color: var(--text-light);
-      border: none;
-      padding: 0.75rem 1.5rem;
-      margin-top: 1rem;
-      font-size: 1rem;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    button:hover:not(:disabled) {
-      background-color: #12123a;
-    }
-
-    button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
+      margin-top: 0.5rem;
     }
 
     #message {
-      margin-top: 1rem;
-      font-size: 1.2rem;
-      font-weight: 600;
-      background-color: var(--accent-color);
-      color: var(--text-dark);
-      padding: 0.75rem;
-      border-radius: 8px;
-      text-align: center;
+      margin-top: 20px;
+      font-size: 1.4rem;
+      font-weight: bold;
+      min-height: 3rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.3s;
+      color: #fff;
+      border-radius: 5px;
+      padding: 0.5rem;
     }
 
+    .info {
+      background-color: #3b82f6;
+      color: #fff;
+    }
+
+    /* Fullscreen overlay styling */
     #overlay {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       z-index: 9999;
-      background-color: rgba(0, 0, 0, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-size: 2rem;
-      font-weight: bold;
+      background-color: rgba(0, 0, 0, 0.8);
       text-align: center;
       padding: 20px;
       cursor: pointer;
     }
-
     #overlay.success {
-      background-color: rgba(141, 233, 105, 0.95);
-      color: #0a0a23;
+      background-color: rgba(34,197,94,0.95); /* Tailwind green-500-ish */
     }
-
     #overlay.error {
-      background-color: rgba(255, 64, 64, 0.95);
+      background-color: rgba(244,63,94,0.95); /* Tailwind red-500-ish */
+    }
+    #overlay-content {
+      color: #fff;
+      font-size: 2rem;
+      font-weight: bold;
+      max-width: 90%;
     }
 
-    #chart-container canvas {
-      max-width: 100%;
+    /* Bin Management Panel */
+    #bin-management {
+      max-width: 600px;
+      margin: 1rem auto;
+      background-color: #ffffff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-
-    #report-list button {
-      margin-bottom: 0.5rem;
-    }
-
-    #report-dropdown {
-      margin-top: 1rem;
-      width: 100%;
-      padding: 0.5rem;
-      border-radius: 6px;
+    #bin-management select,
+    #bin-management button {
+      padding: 8px;
+      margin: 5px;
       font-size: 1rem;
     }
+    #current-bins {
+      margin-top: 15px;
+      font-size: 0.9rem;
+    }
 
-    #tabs {
+    /* Chart & CSV Export */
+    #chart-container {
       max-width: 800px;
-      margin: 2rem auto 1rem;
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-    }
-
-    .tab-button {
-      padding: 0.5rem 1rem;
-      border: 1px solid var(--primary-color);
-      border-radius: 6px;
-      background-color: white;
-      color: var(--primary-color);
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .tab-button.active {
-      background-color: var(--primary-color);
-      color: white;
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    #view-toggle {
+      margin: 1rem auto;
+      background-color: #ffffff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       text-align: center;
+    }
+    #myChart {
+      width: 100%;
+      max-height: 400px;
       margin: 1rem auto;
     }
+
+    #exportBtn {
+      margin: 1rem auto;
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      background-color: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #exportBtn:hover {
+      background-color: #2563eb;
+    }
+
+    /* Scans list */
+    #scans-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem auto;
+      max-width: 800px;
+      text-align: left;
+    }
+    #scans-list li {
+      border-bottom: 1px solid #ddd;
+      padding: 4px 0;
+      font-size: 0.9rem;
+    }
+
+    /* Label Modal or Canvas could be here if needed. */
   </style>
 </head>
 <body>
 
-  <h1>BOXR Parcel Sorting</h1>
+  <h1>Parcel Sorting - Enhanced Bins + UI (Debugged)</h1>
 
+  <!-- 1. Two-Step Scanning UI -->
   <div id="app">
     <p>Current Step: <strong id="current-step">Scan Package</strong></p>
     <input type="text" id="scanner-input" placeholder="Scan here..." autofocus />
     <div id="message" class="info">Please scan the package barcode.</div>
   </div>
 
-  <div id="overlay" onclick="this.style.display='none'">
+  <!-- Fullscreen overlay (initially hidden) -->
+  <div id="overlay">
     <div id="overlay-content">Message goes here</div>
   </div>
 
+  <!-- Audio feedback -->
   <audio id="success-sound" src="success.mp3" preload="auto"></audio>
   <audio id="error-sound" src="error.mp3" preload="auto"></audio>
 
+  <!-- 2. Bin Management -->
   <h2>Bin Management</h2>
   <div id="bin-management">
-    <select id="carrier-select"><option value="">Select Carrier</option></select>
+    <select id="carrier-select">
+      <option value="">Select Carrier</option>
+    </select>
     <button id="create-bin-btn" disabled>Create New Bin Label</button>
-    <div style="margin-top: 1rem;">
-      <label> Label Type:
+    <div>
+      <label>
+        Label Type:
         <select id="label-type-select">
           <option value="barcode">Barcode (CODE128)</option>
           <option value="qr">QR Code</option>
         </select>
       </label>
     </div>
-    <div id="current-bins" style="margin-top: 1rem;">Select a carrier to see current bins</div>
+    <div id="current-bins">Select a carrier to see current bins</div>
   </div>
 
-  <h2>Analytics</h2>
-  <div id="view-toggle">
-    <label>
-      <input type="radio" name="view" value="daily" checked /> Daily
-    </label>
-    <label>
-      <input type="radio" name="view" value="hourly" /> Hourly
-    </label>
-  </div>
-
-  <div id="tabs">
-    <button class="tab-button active" data-tab="scans">Scans</button>
-    <button class="tab-button" data-tab="bins">Bins</button>
-  </div>
-
+  <!-- 3. Analytics Section -->
+  <h2>Scans Analytics</h2>
   <div id="chart-container">
-    <div class="tab-content active" id="tab-scans">
-      <canvas id="myChart"></canvas>
-    </div>
-    <div class="tab-content" id="tab-bins">
-      <canvas id="binsChart"></canvas>
-    </div>
+    <canvas id="myChart"></canvas>
   </div>
-
-  <div style="text-align: center">
-    <button id="exportBtn">Export CSV</button>
-  </div>
-
+  <button id="exportBtn">Export CSV</button>
   <ul id="scans-list"></ul>
 
-  <h2>Daily Reports</h2>
-  <div id="daily-reports">
-    <p>Below are daily CSV reports (shipments per carrier/bin), updated every 24 hours.</p>
-    <div id="report-list"></div>
-    <select id="report-dropdown"></select>
-  </div>
-
   <script type="module">
+    /*************************************************************
+     * A. Firebase + Firestore Setup
+     *************************************************************/
     import {
       initializeApp
     } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
     import {
       getFirestore,
       collection,
-      doc,
-      getDocs,
-      getDoc,
       addDoc,
       setDoc,
-      updateDoc,
-      runTransaction,
+      getDoc,
+      doc,
       query,
-      where,
-      orderBy
+      orderBy,
+      onSnapshot,
+      getDocs,
+      runTransaction
     } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
 
+    // If your code is not clear about what to do when the doc doesn't exist,
+    // please clarify in the chat: do we create it automatically, or do we want
+    // to stop and show an error? We'll assume we create it automatically.
+
+    // FIXME: Replace with your actual Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
       authDomain: "boxr-parcel-sorter.firebaseapp.com",
@@ -262,101 +241,176 @@
       messagingSenderId: "615746259085",
       appId: "1:615746259085:web:b6f7cba3edf84901bcfac4"
     };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const scannerInput = document.getElementById("scanner-input");
-    const carrierSelect = document.getElementById("carrier-select");
-    const createBinBtn = document.getElementById("create-bin-btn");
-    const messageDiv = document.getElementById("message");
-    const currentStepLabel = document.getElementById("current-step");
+    /*************************************************************
+     * B. Carriers & Two-Step Logic
+     *************************************************************/
+    // We'll keep carriers in a static array for prefix detection.
+    // For the doc-based counters, we expect a doc in 'carriers/{carrierName}'
+    // with at least { binCounter: 1 } or 0.
 
-    // This array holds carriers + prefix. We'll do two-step scanning to identify the carrier from prefix
-    const carriersData = [
-      { name: "DHL Paket", prefixes: ["8064"] },
-      { name: "DHL NL", prefixes: ["JVGL"] },
-      { name: "Correos Express", prefixes: ["PKANF"] },
-      { name: "BPOST", prefixes: ["323201"] },
-      { name: "Colis Prive", prefixes: ["Q788","R153"] },
-      { name: "DPD", prefixes: ["0522"] }
+    const carriers = [
+      {
+        name: "DHL Paket",
+        prefixes: ["8064"],
+        logo: "logos/dhl_paket.png"
+      },
+      {
+        name: "DHL NL",
+        prefixes: ["JVGL"],
+        logo: "logos/dhl_nl.png"
+      },
+      {
+        name: "Correos Express",
+        prefixes: ["PKANF"],
+        logo: "logos/correos_express.png"
+      },
+      {
+        name: "BPOST",
+        prefixes: ["323201"],
+        logo: "logos/bpost.png"
+      },
+      {
+        name: "Colis Prive",
+        prefixes: ["Q788", "R153"],
+        logo: "logos/colis_prive.png"
+      },
+      {
+        name: "DPD",
+        prefixes: ["0522"],
+        logo: "logos/dpd.png"
+      }
     ];
 
-    // STEP 1: Populate carriers dropdown
-    function loadCarriers() {
-      carriersData.forEach(c => {
-        // Add each carrier name once if not already present
-        if(![...carrierSelect.options].some(o => o.value === c.name)) {
-          const opt = document.createElement('option');
-          opt.value = c.name;
-          opt.textContent = c.name;
-          carrierSelect.appendChild(opt);
-        }
-      });
-    }
-
-    // STEP 2: Two-step scanning flow states
-    let currentStep = "scanPackage"; // or "scanBin"
+    let currentStep = "scanPackage";
     let expectedBin = null;
 
-    // STEP 3: On page load
-    window.addEventListener("DOMContentLoaded", () => {
-      loadCarriers();
-      // Optional: load analytics, daily reports, etc.
+    // DOM refs
+    const scannerInput = document.getElementById("scanner-input");
+    const messageDiv = document.getElementById("message");
+    const currentStepLabel = document.getElementById("current-step");
+    const overlay = document.getElementById("overlay");
+    const overlayContent = document.getElementById("overlay-content");
+    const successSound = document.getElementById("success-sound");
+    const errorSound = document.getElementById("error-sound");
+    const carrierSelect = document.getElementById("carrier-select");
+    const createBinBtn = document.getElementById("create-bin-btn");
+    const currentBinsDiv = document.getElementById("current-bins");
+    const labelTypeSelect = document.getElementById("label-type-select");
+
+    let overlayHideTimeoutId = null;
+
+    // 1. Populate carrier dropdown
+    carriers.forEach((carrier) => {
+      const option = document.createElement("option");
+      option.value = carrier.name;
+      option.textContent = carrier.name;
+      carrierSelect.appendChild(option);
     });
 
-    // STEP 4: Enable/disable bin creation
+    // 2. Add event listeners
+    scannerInput.addEventListener("change", handleScan);
+    overlay.addEventListener("click", hideOverlay);
     carrierSelect.addEventListener("change", () => {
       createBinBtn.disabled = !carrierSelect.value;
+      loadCarrierBins(carrierSelect.value);
     });
+    createBinBtn.addEventListener("click", createNewBin);
 
-    // STEP 5: scanning logic
-    scannerInput.addEventListener("change", handleScan);
     function handleScan() {
       const code = scannerInput.value.trim();
-      if(!code) return;
       scannerInput.value = "";
+      if (!code) return;
 
-      if(currentStep === "scanPackage") {
+      if (currentStep === "scanPackage") {
         handlePackageScan(code);
       } else {
         handleBinScan(code);
       }
     }
 
-    function handlePackageScan(barcode) {
-      // Find which carrier from prefix
-      const matchedCarrier = findCarrierByPrefix(barcode);
-      if(!matchedCarrier) {
+    // Step 1: Scan Package => find carrier => get bin => expect bin
+    async function handlePackageScan(barcode) {
+      const carrier = findCarrierByPrefix(barcode);
+      if (!carrier) {
         showMessage("ERROR: Unknown carrier!", false);
+        showOverlay("Unknown carrier!", false);
         return;
       }
-      // Attempt to get an open bin or create one if none
-      // For now, just prompt user to scan bin
-      expectedBin = matchedCarrier.name + "-BIN-0001"; // placeholder
-      showMessage(`Package: ${matchedCarrier.name}. Please scan bin ${expectedBin}.`, true);
+
+      // Attempt to get an open bin, else inform user to create.
+      const binCode = await getOpenBinForCarrier(carrier.name);
+      if (!binCode) {
+        showMessage(`No open bin for ${carrier.name}! Create one.`, false);
+        showOverlay(`No open bin for ${carrier.name}! Create one.`, false);
+        return;
+      }
+
+      showMessage(`Package: ${carrier.name}. Please scan bin ${binCode}.`, true);
+      showOverlay(`Package: ${carrier.name}. Now scan bin ${binCode}...`, true);
+      expectedBin = binCode;
       currentStep = "scanBin";
       updateStepLabel();
-      // Save scan doc
-      // TODO: addDoc(...) to 'scans' with { step:'packageScan',carrier:matchedCarrier.name,tracking:barcode }
+
+      // Save package scan
+      try {
+        await addDoc(collection(db, "scans"), {
+          step: "packageScan",
+          carrier: carrier.name,
+          trackingNumber: barcode,
+          bin: binCode,
+          timestamp: Date.now()
+        });
+      } catch (err) {
+        console.error("Error saving package scan:", err);
+      }
     }
 
-    function handleBinScan(scannedBin) {
-      if(scannedBin === expectedBin) {
+    // Step 2: Scan Bin => confirm it matches expectedBin
+    async function handleBinScan(scannedBin) {
+      if (scannedBin === expectedBin) {
         showMessage("Correct Bin! Sorting Complete.", true);
+        showOverlay("Correct Bin! Sorting Complete.", true);
+
+        try {
+          await addDoc(collection(db, "scans"), {
+            step: "binScan",
+            bin: scannedBin,
+            status: "correct",
+            timestamp: Date.now()
+          });
+        } catch (err) {
+          console.error("Error saving bin scan:", err);
+        }
       } else {
         showMessage(`ERROR: Wrong bin! Expected ${expectedBin}.`, false);
+        showOverlay(`Wrong bin! Expected ${expectedBin}...`, false);
+        try {
+          await addDoc(collection(db, "scans"), {
+            step: "binScan",
+            bin: scannedBin,
+            status: "incorrect",
+            expected: expectedBin,
+            timestamp: Date.now()
+          });
+        } catch (err) {
+          console.error("Error saving bin error:", err);
+        }
         return;
       }
+
       currentStep = "scanPackage";
       expectedBin = null;
       updateStepLabel();
-      // TODO: addDoc(...) step:'binScan'
     }
 
     function findCarrierByPrefix(barcode) {
-      for(const c of carriersData) {
-        for(const pfx of c.prefixes) {
-          if(barcode.startsWith(pfx)) {
+      for (const c of carriers) {
+        for (const pfx of c.prefixes) {
+          if (barcode.startsWith(pfx)) {
             return c;
           }
         }
@@ -364,58 +418,300 @@
       return null;
     }
 
-    function updateStepLabel() {
-      currentStepLabel.textContent = currentStep === "scanPackage" ? "Scan Package" : "Scan Bin";
-    }
-
-    // STEP 6: create bin logic
-    createBinBtn.addEventListener("click", async () => {
-      const carrier = carrierSelect.value;
-      if(!carrier) return;
-      console.log("Creating bin for", carrier);
-      messageDiv.textContent = `Creating bin for ${carrier}...`;
-      // e.g. runTransaction to increment binCounter doc
-      // store new bin doc
-      // update currentBins div
-    });
-
+    // UI Helpers
     function showMessage(msg, isSuccess) {
       messageDiv.textContent = msg;
-      messageDiv.style.backgroundColor = isSuccess ? "#8de969" : "tomato";
-      // Optional: add success/error sounds, overlay, etc.
+      messageDiv.classList.remove("info");
+      if (isSuccess) {
+        messageDiv.style.backgroundColor = "#34d399"; // green-400
+        playSuccessSound();
+      } else {
+        messageDiv.style.backgroundColor = "#f87171"; // red-400
+        playErrorSound();
+      }
     }
 
-    // TABS
-    document.querySelectorAll(".tab-button").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
-        document.querySelectorAll(".tab-content").forEach(tc => tc.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+    function showOverlay(msg, isSuccess) {
+      if (overlayHideTimeoutId) {
+        clearTimeout(overlayHideTimeoutId);
+      }
+      overlay.classList.remove("success", "error");
+
+      if (isSuccess) {
+        overlay.classList.add("success");
+        playSuccessSound();
+      } else {
+        overlay.classList.add("error");
+        playErrorSound();
+      }
+
+      overlayContent.textContent = msg;
+      overlay.style.display = "flex";
+
+      overlayHideTimeoutId = setTimeout(() => {
+        hideOverlay();
+      }, 2000);
+    }
+
+    function hideOverlay() {
+      overlay.style.display = "none";
+    }
+
+    function updateStepLabel() {
+      currentStepLabel.textContent =
+        currentStep === "scanPackage" ? "Scan Package" : "Scan Bin";
+    }
+
+    function playSuccessSound() {
+      if (successSound) {
+        successSound.currentTime = 0;
+        successSound.play().catch(() => {});
+      }
+    }
+
+    function playErrorSound() {
+      if (errorSound) {
+        errorSound.currentTime = 0;
+        errorSound.play().catch(() => {});
+      }
+    }
+
+    /*************************************************************
+     * C. Bin Management with Firestore to avoid duplicates
+     *************************************************************/
+
+    async function loadCarrierBins(carrierName) {
+      if (!carrierName) {
+        currentBinsDiv.innerHTML = "Select a carrier to see current bins";
+        return;
+      }
+      let html = `<strong>Current Bins for ${carrierName}:</strong><br>`;
+      const binsSnap = await getDocs(collection(db, "bins"));
+      let found = false;
+      binsSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.carrier === carrierName) {
+          found = true;
+          html += `${data.binCode}<br>`;
+        }
       });
+      if (!found) {
+        html += "<em>No bins yet</em>";
+      }
+      currentBinsDiv.innerHTML = html;
+    }
+
+    async function createNewBin() {
+      const carrierName = carrierSelect.value;
+      if (!carrierName) return;
+
+      // Attempt to create or update the doc in 'carriers/{carrierName}' if missing.
+      try {
+        const carrierDocRef = doc(db, "carriers", carrierName);
+        const binCode = await runTransaction(db, async (transaction) => {
+          const carrierDocSnap = await transaction.get(carrierDocRef);
+          let binCounter = 1;
+          // If doc doesn't exist, create it
+          if (!carrierDocSnap.exists()) {
+            transaction.set(carrierDocRef, { binCounter: 1 });
+            binCounter = 1;
+          } else {
+            binCounter = carrierDocSnap.data().binCounter || 1;
+          }
+
+          const binNumberStr = String(binCounter).padStart(4, "0");
+          const newBinCode = `${carrierName}-BIN-${binNumberStr}`;
+
+          // increment counter
+          transaction.set(carrierDocRef, {
+            binCounter: binCounter + 1
+          }, { merge: true });
+
+          // create new bin doc
+          const newBinDocRef = doc(collection(db, "bins"));
+          transaction.set(newBinDocRef, {
+            carrier: carrierName,
+            binCode: newBinCode,
+            isFull: false,
+            createdAt: Date.now()
+          });
+
+          return newBinCode;
+        });
+
+        generateBinLabel(carrierName, binCode);
+        loadCarrierBins(carrierName);
+      } catch (err) {
+        console.error("Error creating new bin:", err);
+      }
+    }
+
+    function generateBinLabel(carrierName, binCode) {
+      const labelType = labelTypeSelect.value;
+      const canvas = document.createElement("canvas");
+      canvas.width = 350;
+      canvas.height = 200;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#000";
+      ctx.font = "bold 16px sans-serif";
+      ctx.fillText(carrierName, 10, 20);
+      ctx.font = "14px sans-serif";
+      ctx.fillText(binCode, 10, 40);
+
+      if (labelType === "barcode") {
+        const barcodeCanvas = document.createElement("canvas");
+        JsBarcode(barcodeCanvas, binCode, {
+          format: "CODE128",
+          displayValue: true,
+          fontSize: 14,
+          width: 2,
+          height: 60
+        });
+        ctx.drawImage(barcodeCanvas, 10, 50);
+      } else {
+        const qrCanvas = document.createElement("canvas");
+        const qr = new QRious({
+          element: qrCanvas,
+          value: binCode,
+          size: 100
+        });
+        ctx.drawImage(qrCanvas, 10, 50);
+      }
+
+      const link = document.createElement("a");
+      link.download = `${binCode}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    async function getOpenBinForCarrier(carrierName) {
+      const binsSnap = await getDocs(collection(db, "bins"));
+      let chosenBin = null;
+      let latestCreated = -1;
+      binsSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.carrier === carrierName && data.isFull === false) {
+          if (data.createdAt > latestCreated) {
+            latestCreated = data.createdAt;
+            chosenBin = data.binCode;
+          }
+        }
+      });
+      return chosenBin;
+    }
+
+    /*************************************************************
+     * D. Real-Time Analytics
+     *************************************************************/
+    const scansList = document.getElementById("scans-list");
+    const exportBtn = document.getElementById("exportBtn");
+    let myChart;
+
+    const scansQuery = query(collection(db, "scans"), orderBy("timestamp", "desc"));
+    onSnapshot(scansQuery, (snapshot) => {
+      const allScans = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      renderChart(allScans);
+      renderScansList(allScans);
     });
 
-    // DAILY/HOURLY view toggle
-    document.querySelectorAll('input[name="view"]').forEach(input => {
-      input.addEventListener("change", e => {
-        console.log("Selected view:", e.target.value);
-        // TODO: reload charts with daily vs. hourly
+    function renderChart(scans) {
+      const packageScans = scans.filter((s) => s.step === "packageScan");
+      const carrierCountMap = {};
+      packageScans.forEach((s) => {
+        const c = s.carrier || "Unknown";
+        carrierCountMap[c] = (carrierCountMap[c] || 0) + 1;
       });
+
+      if (myChart) {
+        myChart.destroy();
+      }
+      const ctx = document.getElementById("myChart").getContext("2d");
+      myChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: Object.keys(carrierCountMap),
+          datasets: [
+            {
+              label: "Parcel Count (by carrier)",
+              data: Object.values(carrierCountMap),
+              backgroundColor: [
+                "#2196F3",
+                "#4CAF50",
+                "#FF9800",
+                "#9C27B0",
+                "#E91E63",
+                "#8BC34A",
+              ],
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function renderScansList(scans) {
+      scansList.innerHTML = "";
+      scans.forEach((s) => {
+        const li = document.createElement("li");
+        const timeStr = new Date(s.timestamp).toLocaleString();
+        if (s.step === "packageScan") {
+          li.textContent = `[${timeStr}] PACKAGE - Carrier: ${s.carrier}, Track#: ${s.trackingNumber}, Bin: ${s.bin}`;
+        } else {
+          li.textContent = `[${timeStr}] BIN - Bin: ${s.bin}, status: ${s.status || "?"}`;
+        }
+        scansList.appendChild(li);
+      });
+    }
+
+    exportBtn.addEventListener("click", async () => {
+      const snap = await getDocs(scansQuery);
+      let csv = "step,carrier,trackingNumber,bin,status,timestamp\n";
+      snap.forEach((doc) => {
+        const d = doc.data();
+        csv += [
+          d.step || "",
+          d.carrier || "",
+          d.trackingNumber || "",
+          d.bin || "",
+          d.status || "",
+          d.timestamp || ""
+        ].join(",") + "\n";
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "scans.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     });
 
-    // EXAMPLE: advanced analytics placeholders for myChart, binsChart
-    // function loadAnalyticsDaily() {...}
-    // function loadAnalyticsHourly() {...}
-    // Then whichever is selected, we call that function.
+    /*************************************************************
+     * E. TEST CASES
+     *************************************************************/
+    // 1. Test creating a bin for a carrier doc that doesn't exist.
+    //    Expected behavior: The code automatically creates that doc with binCounter=1, then sets binCounter=2.
+    // 2. Test scanning a known prefix ("8064" = DHL Paket) => expects to find or prompt for a bin.
+    // 3. If doc exists but has no binCounter, the code sets binCounter=1 by default.
+    //
+    // If any of these behaviors are not what's intended, please clarify in the chat.
 
-    // #4. Test Cases (unchanged)
-    // 1) Let 24h pass, open page => daily report created
-    // 2) older than 30 days => archived
-    // 3) UI: first 5 in the list, rest in dropdown
-    // 4) scanning prefix => find carrier
-    // 5) two-step: if correct bin => success
-
-    // [More advanced code can be integrated if needed...]
   </script>
 </body>
 </html>
