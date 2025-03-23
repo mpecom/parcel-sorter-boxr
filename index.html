@@ -316,12 +316,13 @@
     const db = getFirestore(app);
 
     const carriers = [
-      { name: "DHL Paket", prefixes: ["8064"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/logos%2Fdhl_paket.png?alt=media" },
-      { name: "DHL NL", prefixes: ["JVGL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/logos%2Fdhl_nl.png?alt=media" },
-      { name: "Correos Express", prefixes: ["PKANF"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/logos%2Fcorreos_express.png?alt=media" },
+      { name: "DHL Paket", prefixes: ["0034"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/dhl-paket-logo.png?alt=media&token=4afc735e-4fcc-481d-b076-0af82ce38aaa" },
+      { name: "DHL NL", prefixes: ["JVGL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/dhl-logo.png?alt=media&token=11f9bf2d-7fc4-4e2c-90a7-457ed23ef035" },
+      { name: "Correos Express", prefixes: ["PKANF"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/correos-logo.png?alt=media&token=de0f6f7d-01e2-46e3-b996-aceaa69cdab6" },
       { name: "BPOST", prefixes: ["323201"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/logos%2Fbpost.png?alt=media" },
       { name: "Colis Prive", prefixes: ["Q788", "R153"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/logos%2Fcolis_prive.png?alt=media" },
-      { name: "DPD", prefixes: ["0522"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/logos%2Fdpd.png?alt=media" }
+      { name: "DPD", prefixes: ["0522"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/logos%2Fdpd.png?alt=media" },
+      { name: "GLS", prefixes: ["8064"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/gls-logo.png?alt=media&token=ce890c20-dcc6-48e9-9e56-d6496f09a8a8" }
     ];
 
     let currentStep = "scanPackage";
@@ -573,6 +574,7 @@
       }
     }
 
+    // Updated loadImage function (unchanged from original, included for completeness)
     async function loadImage(url) {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -591,6 +593,7 @@
       });
     }
 
+    // Updated generateBinLabel function from Step 1
     async function generateBinLabel(carrierName, binCode) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
@@ -606,10 +609,31 @@
       if (carrier && carrier.logo) {
         try {
           const logoData = await loadImage(carrier.logo);
-          doc.addImage(logoData, 'PNG', 25, 10, 50, 25);
+          // Load the image to get its dimensions
+          const img = new Image();
+          img.src = logoData;
+          await new Promise(resolve => { img.onload = resolve; });
+
+          // Calculate dimensions to preserve aspect ratio
+          const maxWidth = 50; // Maximum width in mm
+          const maxHeight = 25; // Maximum height in mm
+          const aspectRatio = img.width / img.height;
+          let width = maxWidth;
+          let height = maxWidth / aspectRatio;
+          if (height > maxHeight) {
+            height = maxHeight;
+            width = maxHeight * aspectRatio;
+          }
+
+          // Center the logo horizontally
+          const x = (100 - width) / 2;
+          doc.addImage(logoData, 'PNG', x, 10, width, height);
         } catch (err) {
           console.error("Error loading logo for bin label:", err);
+          showMessage("Failed to load carrier logo for the bin label.", false);
         }
+      } else {
+        showMessage("No logo available for this carrier.", false);
       }
 
       doc.setFontSize(16);
