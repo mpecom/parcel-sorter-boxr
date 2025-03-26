@@ -315,16 +315,16 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-   const carriers = [
-  { name: "DHL Paket", prefixes: ["8064"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/dhl-paket-logo.png?alt=media&token=4afc735e-4fcc-481d-b076-0af82ce38aaa" },
-  { name: "DHL NL", prefixes: ["JVGL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/dhl-logo.png?alt=media&token=11f9bf2d-7fc4-4e2c-90a7-457ed23ef035" },
-  { name: "Correos Express", prefixes: ["PKANF"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/correos-logo.png?alt=media&token=de0f6f7d-01e2-46e3-b996-aceaa69cdab6" },
-  { name: "BPOST", prefixes: ["323201"], logo: "" },
-  { name: "Colis Prive", prefixes: ["Q788", "R153"], logo: "" },
-  { name: "DPD", prefixes: ["0522"], logo: "" },
-  { name: "GLS", prefixes: ["GLS"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/gls-logo.png?alt=media&token=ce890c20-dcc6-48e9-9e56-d6496f09a8a8" },
-  { name: "PostNL", prefixes: ["POSTNL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/postnl-logo.png?alt=media&token=df524e2d-d1f8-4203-a0d3-168412919b90" }
-];
+    const carriers = [
+      { name: "DHL Paket", prefixes: ["8064"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/dhl-paket-logo.png?alt=media&token=4afc735e-4fcc-481d-b076-0af82ce38aaa" },
+      { name: "DHL NL", prefixes: ["JVGL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/dhl-logo.png?alt=media&token=11f9bf2d-7fc4-4e2c-90a7-457ed23ef035" },
+      { name: "Correos Express", prefixes: ["PKANF"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/correos-logo.png?alt=media&token=de0f6f7d-01e2-46e3-b996-aceaa69cdab6" },
+      { name: "BPOST", prefixes: ["323201"], logo: "" },
+      { name: "Colis Prive", prefixes: ["Q788", "R153"], logo: "" },
+      { name: "DPD", prefixes: ["0522"], logo: "" },
+      { name: "GLS", prefixes: ["GLS"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/gls-logo.png?alt=media&token=ce890c20-dcc6-48e9-9e56-d6496f09a8a8" },
+      { name: "PostNL", prefixes: ["POSTNL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/postnl-logo.png?alt=media&token=df524e2d-d1f8-4203-a0d3-168412919b90" }
+    ];
 
     let currentStep = "scanPackage";
     let expectedBin = null;
@@ -575,7 +575,6 @@
       }
     }
 
-    // Updated loadImage function (unchanged from original, included for completeness)
     async function loadImage(url) {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -589,12 +588,11 @@
           const dataURL = canvas.toDataURL("image/png");
           resolve(dataURL);
         };
-        img.onerror = reject;
+        img.onerror = (err) => reject(new Error(`Failed to load image: ${url}`));
         img.src = url;
       });
     }
 
-    // Updated generateBinLabel function from Step 1
     async function generateBinLabel(carrierName, binCode) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
@@ -607,17 +605,25 @@
       doc.rect(5, 5, 90, 140);
 
       const carrier = carriers.find(c => c.name === carrierName);
+      let logoAdded = false;
+
       if (carrier && carrier.logo) {
         try {
+          console.log(`Attempting to load logo for ${carrierName}: ${carrier.logo}`);
           const logoData = await loadImage(carrier.logo);
+          console.log(`Logo loaded successfully for ${carrierName}`);
+
           // Load the image to get its dimensions
           const img = new Image();
           img.src = logoData;
-          await new Promise(resolve => { img.onload = resolve; });
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
 
           // Calculate dimensions to preserve aspect ratio
-          const maxWidth = 50; // Maximum width in mm
-          const maxHeight = 25; // Maximum height in mm
+          const maxWidth = 70; // Increased from 50 mm to 70 mm
+          const maxHeight = 35; // Increased from 25 mm to 35 mm
           const aspectRatio = img.width / img.height;
           let width = maxWidth;
           let height = maxWidth / aspectRatio;
@@ -629,30 +635,40 @@
           // Center the logo horizontally
           const x = (100 - width) / 2;
           doc.addImage(logoData, 'PNG', x, 10, width, height);
+          logoAdded = true;
         } catch (err) {
-          console.error("Error loading logo for bin label:", err);
-          showMessage("Failed to load carrier logo for the bin label.", false);
+          console.error(`Error loading logo for ${carrierName}:`, err);
+          showMessage(`Failed to load carrier logo for ${carrierName}.`, false);
         }
       } else {
-        showMessage("No logo available for this carrier.", false);
+        console.warn(`No logo available for ${carrierName}`);
+        showMessage(`No logo available for ${carrierName}.`, false);
       }
 
+      // Add placeholder text if logo failed to load or is not available
+      if (!logoAdded) {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("Logo Not Available", 50, 20, { align: "center" });
+      }
+
+      // Adjust text positions to reduce whitespace
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text(carrierName, (100 - doc.getTextWidth(carrierName)) / 2, 45);
+      doc.text(carrierName, (100 - doc.getTextWidth(carrierName)) / 2, 50);
       doc.setFontSize(14);
       doc.setFont("helvetica", "normal");
-      doc.text(binCode, (100 - doc.getTextWidth(binCode)) / 2, 55);
+      doc.text(binCode, (100 - doc.getTextWidth(binCode)) / 2, 60);
 
       const labelType = labelTypeSelect.value;
       if (labelType === "barcode") {
         const barcodeCanvas = document.createElement("canvas");
-        JsBarcode(barcodeCanvas, binCode, { format: "CODE128", displayValue: true, fontSize: 14, width: 2, height: 60 });
-        doc.addImage(barcodeCanvas.toDataURL("image/png"), 'PNG', 10, 65, 80, 40);
+        JsBarcode(barcodeCanvas, binCode, { format: "CODE128", displayValue: true, fontSize: 14, width: 2, height: 50 });
+        doc.addImage(barcodeCanvas.toDataURL("image/png"), 'PNG', 10, 90, 80, 30);
       } else {
         const qrCanvas = document.createElement("canvas");
         new QRious({ element: qrCanvas, value: binCode, size: 100 });
-        doc.addImage(qrCanvas.toDataURL("image/png"), 'PNG', 25, 65, 50, 50);
+        doc.addImage(qrCanvas.toDataURL("image/png"), 'PNG', 25, 70, 50, 50);
       }
 
       doc.save(`${binCode}.pdf`);
