@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BOXR Parcel Sorter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.2.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f7fa;
+      color: #1a1c2e;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #0022ee 0%, #3366ff 100%);
+      color: white;
+      border-radius: 8px 8px 0 0;
+    }
+
+    #logo {
+      max-height: 50px;
+      width: auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+
+    /* Media query for mobile devices (below 768px) */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column; /* Stack logo and title vertically */
+        align-items: center; /* Center-align items */
+        padding: 0.5rem 1rem; /* Reduce padding on mobile */
+      }
+
+      #logo {
+        max-width: 120px; /* Use max-width instead of max-height to scale better */
+        margin-bottom: 0.5rem; /* Add space between logo and title */
+      }
+
+      h1 {
+        font-size: 1.2rem; /* Reduce font size on mobile */
+        text-align: center; /* Center the title */
+      }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      margin-bottom: 2rem;
+      transition: transform 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: #0022ee;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1rem;
+      border: 1px solid #e0e4e8;
+      border-radius: 6px;
+      box-sizing: border-box;
+      background: #f9fafb;
+      color: #1a1c2e;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #0022ee;
+      outline: none;
+    }
+
+    #message {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+      background-color: rgba(0, 0, 0, 0.8);
+      align-items: center;
+      justify-content: center;
+    }
+
+    #overlay-content {
+      color: #fff;
+      font-size: 2rem;
+      font-weight: bold;
+      padding: 1rem;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    select, button {
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: none;
+      background: #e0e4e8;
+      color: #1a1c2e;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.1s;
+    }
+
+    button {
+      background: #0022ee;
+      color: white;
+    }
+
+    button:hover {
+      background: #0019b3;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    select:hover {
+      background: #d1d5db;
+    }
+
+    #analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 2rem;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 350px;
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    #scans-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    #scans-list li {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #e0e4e8;
+      font-size: 0.95rem;
+      color: #1a1c2e;
+    }
+
+    #csv-section {
+      margin-top: 2rem;
+    }
+
+    #csv-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #csv-list li {
+      padding: 0.75rem;
+      border-bottom: 1px solid #e0e4e8;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #csv-list li a {
+      color: #0022ee;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    #csv-list li a:hover {
+      text-decoration: underline;
+    }
+
+    .pagination {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
+      color: #0022ee;
+    }
+
+    #carrier-settings-list {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+    }
+
+    .carrier-setting {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid #e0e4e8;
+    }
+
+    .carrier-setting label {
+      flex: 1;
+      margin-left: 0.5rem;
+      color: #1a1c2e;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    #settings-btn {
+      background: #e0e4e8;
+      color: #1a1c2e;
+    }
+
+    #settings-btn:hover {
+      background: #d1d5db;
+    }
+
+    #settings-save-btn {
+      background: #0022ee;
+      color: white;
+    }
+
+    #settings-save-btn:hover {
+      background: #0019b3;
+    }
+
+    #settings-cancel-btn {
+      background: #ff6f61;
+      color: white;
+    }
+
+    #settings-cancel-btn:hover {
+      background: #e65a50;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img id="logo" src="https://cdn.shopify.com/s/files/1/0596/0197/7522/files/LG_BOXR_RGB-WHITE.png?v=1742598360" alt="BOXR Logo">
+      <h1>BOXR Parcel Sorter</h1>
+    </header>
+
+    <div class="card" id="app">
+      <h2>Scan Parcels</h2>
+      <p>Current Step: <strong id="current-step">Scan Package</strong></p>
+      <input type="text" id="scanner-input" placeholder="Scan here..." autofocus />
+      <div id="message"></div>
+    </div>
+
+    <div id="overlay">
+      <div id="overlay-content"></div>
+    </div>
+
+    <audio id="success-sound" src="https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/Mountain%20Audio%20-%20Confirm%20Button.mp3?alt=media" preload="auto"></audio>
+    <audio id="error-sound" src="https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/Wrong%20Error%20Effect.wav?alt=media" preload="auto"></audio>
+
+    <div class="card">
+      <h2>Bin Management</h2>
+      <div class="controls">
+        <select id="carrier-select">
+          <option value="">Select Carrier</option>
+        </select>
+        <button id="create-bin-btn" disabled>Create Bin Label</button>
+        <select id="label-type-select">
+          <option value="barcode">Barcode</option>
+          <option value="qr">QR Code</option>
+        </select>
+        <button id="settings-btn">Settings</button>
+      </div>
+      <div id="current-bins">Select a carrier to see current bins</div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h2>Carrier Settings</h2>
+        <p>Select which carriers to show in the dropdown:</p>
+        <div id="carrier-settings-list"></div>
+        <div class="modal-actions">
+          <button id="settings-save-btn">Save</button>
+          <button id="settings-cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Analytics</h2>
+      <div class="controls">
+        <select id="time-filter">
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="7d">Last 7 Days</option>
+          <option value="30d">Last 30 Days</option>
+        </select>
+      </div>
+      <div id="analytics-grid">
+        <div class="chart-container">
+          <canvas id="carrier-chart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="scans-per-hour"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="bins-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Recent Scans</h2>
+      <ul id="scans-list"></ul>
+    </div>
+
+    <div class="card" id="csv-section">
+      <h2>Export History</h2>
+      <div class="controls">
+        <button id="exportBtn">Export Today's Scans</button>
+        <select id="csv-limit">
+          <option value="5">Show 5</option>
+          <option value="10">Show 10</option>
+          <option value="20">Show 20</option>
+          <option value="all">Show All</option>
+        </select>
+      </div>
+      <ul id="csv-list"></ul>
+      <div class="pagination">
+        <button id="csv-prev" disabled>Previous</button>
+        <span id="csv-page-info"></span>
+        <button id="csv-next" disabled>Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+  
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, setDoc, getDoc, doc, query, orderBy, onSnapshot, getDocs, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/9.17.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ6tvUMj2UQUQ3OU5cYdcod_ZUySi2D2s",
+      authDomain: "boxr-parcel-sorter.firebaseapp.com",
+      projectId: "boxr-parcel-sorter",
+      storageBucket: "boxr-parcel-sorter.firebasestorage.app",
+      messagingSenderId: "615746259085",
+      appId: "1:615746259085:web:b6f7cba3edf84901bcfac4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const carriers = [
+      { name: "DHL Paket", prefixes: ["8064"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/DHL%20Paket.png?alt=media&token=375b3efe-0bb5-4648-9003-edc85a094789" },
+      { name: "DHL NL", prefixes: ["JVGL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/DHL%20NL.png?alt=media&token=79c92b57-9386-4906-a07e-0c28ba6b48ce" },
+      { name: "Correos Express", prefixes: ["PKANF"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/Correos%20Express.png?alt=media&token=79aa0bae-5909-4044-82e5-708123ef68f4" },
+      { name: "BPOST", prefixes: ["323201"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/BPOST.png?alt=media&token=f8c4c319-02f1-4354-90c4-cac0ca6ba506" },
+      { name: "Colis Prive", prefixes: ["Q788", "R153"], logo: "" },
+      { name: "DPD", prefixes: ["0522"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/DPD.png?alt=media&token=3326273c-fa36-4103-accb-410e1a8829ac" },
+      { name: "GLS", prefixes: ["GLS"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/GLS.png?alt=media&token=301288d5-d4f5-4fbe-a200-8d37615b7c99" },
+      { name: "PostNL", prefixes: ["POSTNL"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/POSTNL.png?alt=media&token=09caf244-b240-4bd5-ba54-d30f393156c0" },
+      { name: "POST AT", prefixes: ["TBD"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/POST%20AT.png?alt=media&token=798e21e4-f53f-40b1-9868-2445c7ede028" },
+      { name: "Mondial Relay", prefixes: ["TBD"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/MONDIAL%20RELAY.png?alt=media&token=b1d775d6-b4b0-4780-bfb8-af94abe0558e" },
+      { name: "COLLISIMO", prefixes: ["TBD"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/COLLISIMO.png?alt=media&token=b5a535ad-2752-416f-87be-9013520f6919" },
+      { name: "CHRONOPOST", prefixes: ["TBD"], logo: "https://firebasestorage.googleapis.com/v0/b/boxr-parcel-sorter.firebasestorage.app/o/CHRONOPOST.png?alt=media&token=7f802ed8-77e8-49b5-b316-6daf77999d44" }
+    ];
+
+    let currentStep = "scanPackage";
+    let expectedBin = null;
+    let charts = {};
+    let csvData = [];
+    let currentCsvPage = 1;
+    let csvPerPage = 5;
+
+    const scannerInput = document.getElementById("scanner-input");
+    const messageDiv = document.getElementById("message");
+    const currentStepLabel = document.getElementById("current-step");
+    const overlay = document.getElementById("overlay");
+    const overlayContent = document.getElementById("overlay-content");
+    const successSound = document.getElementById("success-sound");
+    const errorSound = document.getElementById("error-sound");
+    const carrierSelect = document.getElementById("carrier-select");
+    const createBinBtn = document.getElementById("create-bin-btn");
+    const currentBinsDiv = document.getElementById("current-bins");
+    const labelTypeSelect = document.getElementById("label-type-select");
+    const timeFilter = document.getElementById("time-filter");
+    const scansList = document.getElementById("scans-list");
+    const exportBtn = document.getElementById("exportBtn");
+    const csvList = document.getElementById("csv-list");
+    const csvLimit = document.getElementById("csv-limit");
+    const csvPrev = document.getElementById("csv-prev");
+    const csvNext = document.getElementById("csv-next");
+    const csvPageInfo = document.getElementById("csv-page-info");
+    const settingsBtn = document.getElementById("settings-btn");
+    const settingsModal = document.getElementById("settings-modal");
+    const carrierSettingsList = document.getElementById("carrier-settings-list");
+    const settingsSaveBtn = document.getElementById("settings-save-btn");
+    const settingsCancelBtn = document.getElementById("settings-cancel-btn");
+
+    let overlayHideTimeoutId = null;
+    let carrierVisibility = {};
+
+    // Initialize carrier visibility from local storage
+    function initializeCarrierVisibility() {
+      const storedVisibility = localStorage.getItem("carrierVisibility");
+      if (storedVisibility) {
+        carrierVisibility = JSON.parse(storedVisibility);
+      } else {
+        // Default: all carriers are enabled
+        carriers.forEach(carrier => {
+          carrierVisibility[carrier.name] = true;
+        });
+        localStorage.setItem("carrierVisibility", JSON.stringify(carrierVisibility));
+      }
+    }
+
+    // Populate the carrier dropdown based on visibility
+    function populateCarrierDropdown() {
+      carrierSelect.innerHTML = '<option value="">Select Carrier</option>';
+      carriers.forEach(carrier => {
+        if (carrierVisibility[carrier.name]) {
+          const option = document.createElement("option");
+          option.value = carrier.name;
+          option.textContent = carrier.name;
+          carrierSelect.appendChild(option);
+        }
+      });
+      // Reset the selected carrier and bins display
+      carrierSelect.value = "";
+      createBinBtn.disabled = true;
+      currentBinsDiv.innerHTML = "Select a carrier to see current bins";
+    }
+
+    // Open the settings modal and populate the carrier list
+    function openSettingsModal() {
+      carrierSettingsList.innerHTML = "";
+      carriers.forEach(carrier => {
+        const div = document.createElement("div");
+        div.className = "carrier-setting";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = `carrier-${carrier.name}`;
+        checkbox.checked = carrierVisibility[carrier.name];
+        const label = document.createElement("label");
+        label.htmlFor = `carrier-${carrier.name}`;
+        label.textContent = carrier.name;
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        carrierSettingsList.appendChild(div);
+      });
+      settingsModal.style.display = "flex";
+    }
+
+    // Close the settings modal without saving
+    function closeSettingsModal() {
+      settingsModal.style.display = "none";
+    }
+
+    // Save the settings and update the dropdown
+    function saveSettings() {
+      const newVisibility = {};
+      carriers.forEach(carrier => {
+        const checkbox = document.getElementById(`carrier-${carrier.name}`);
+        newVisibility[carrier.name] = checkbox.checked;
+      });
+      carrierVisibility = newVisibility;
+      localStorage.setItem("carrierVisibility", JSON.stringify(carrierVisibility));
+      populateCarrierDropdown();
+      closeSettingsModal();
+    }
+
+    // Event listeners for settings
+    settingsBtn.addEventListener("click", openSettingsModal);
+    settingsCancelBtn.addEventListener("click", closeSettingsModal);
+    settingsSaveBtn.addEventListener("click", saveSettings);
+
+    // Event listeners
+    scannerInput.addEventListener("change", handleScan);
+    overlay.addEventListener("click", hideOverlay);
+    carrierSelect.addEventListener("change", () => {
+      createBinBtn.disabled = !carrierSelect.value;
+      loadCarrierBins(carrierSelect.value);
+    });
+    createBinBtn.addEventListener("click", createNewBin);
+    timeFilter.addEventListener("change", updateAnalytics);
+    exportBtn.addEventListener("click", exportCSV);
+    csvLimit.addEventListener("change", () => {
+      csvPerPage = csvLimit.value === "all" ? csvData.length : parseInt(csvLimit.value);
+      currentCsvPage = 1;
+      renderCsvList();
+    });
+    csvPrev.addEventListener("click", () => {
+      if (currentCsvPage > 1) {
+        currentCsvPage--;
+        renderCsvList();
+      }
+    });
+    csvNext.addEventListener("click", () => {
+      if (currentCsvPage < Math.ceil(csvData.length / csvPerPage)) {
+        currentCsvPage++;
+        renderCsvList();
+      }
+    });
+
+    function handleScan() {
+      const code = scannerInput.value.trim();
+      scannerInput.value = "";
+      if (!code) return;
+
+      if (currentStep === "scanPackage") {
+        handlePackageScan(code);
+      } else {
+        handleBinScan(code);
+      }
+    }
+
+    async function handlePackageScan(barcode) {
+      const carrier = findCarrierByPrefix(barcode);
+      if (!carrier) {
+        showMessage("Unknown carrier!", false);
+        showOverlay("Unknown carrier!", false);
+        return;
+      }
+
+      const binCode = await getOpenBinForCarrier(carrier.name);
+      if (!binCode) {
+        showMessage(`No open bin for ${carrier.name}! Create one.`, false);
+        showOverlay(`No open bin for ${carrier.name}!`, false);
+        return;
+      }
+
+      showMessage(`Package: ${carrier.name}. Scan bin ${binCode}.`, true);
+      showOverlay(`Scan bin ${binCode}...`, true);
+      expectedBin = binCode;
+      currentStep = "scanBin";
+      updateStepLabel();
+
+      try {
+        await addDoc(collection(db, "scans"), {
+          step: "packageScan",
+          carrier: carrier.name,
+          trackingNumber: barcode,
+          bin: binCode,
+          timestamp: Date.now()
+        });
+      } catch (err) {
+        console.error("Error saving package scan:", err);
+      }
+    }
+
+    async function handleBinScan(scannedBin) {
+      if (scannedBin === expectedBin) {
+        showMessage("Sorting Complete!", true);
+        showOverlay("Correct Bin!", true);
+        try {
+          await addDoc(collection(db, "scans"), {
+            step: "binScan",
+            bin: scannedBin,
+            status: "correct",
+            timestamp: Date.now()
+          });
+        } catch (err) {
+          console.error("Error saving bin scan:", err);
+        }
+      } else {
+        showMessage(`Wrong bin! Expected ${expectedBin}.`, false);
+        showOverlay(`Wrong bin! Expected ${expectedBin}`, false);
+        try {
+          await addDoc(collection(db, "scans"), {
+            step: "binScan",
+            bin: scannedBin,
+            status: "incorrect",
+            expected: expectedBin,
+            timestamp: Date.now()
+          });
+        } catch (err) {
+          console.error("Error saving bin error:", err);
+        }
+        return;
+      }
+
+      currentStep = "scanPackage";
+      expectedBin = null;
+      updateStepLabel();
+    }
+
+    function findCarrierByPrefix(barcode) {
+      for (const c of carriers) {
+        for (const pfx of c.prefixes) {
+          if (barcode.startsWith(pfx)) return c;
+        }
+      }
+      return null;
+    }
+
+    function showMessage(msg, isSuccess) {
+      messageDiv.textContent = msg;
+      messageDiv.style.backgroundColor = isSuccess ? "#00c4b4" : "#ff6f61";
+      messageDiv.style.color = "#fff";
+      isSuccess ? playSuccessSound() : playErrorSound();
+    }
+
+    function showOverlay(msg, isSuccess) {
+      if (overlayHideTimeoutId) clearTimeout(overlayHideTimeoutId);
+      overlay.style.backgroundColor = isSuccess ? "rgba(0,196,180,0.95)" : "rgba(255,111,97,0.95)";
+      overlayContent.textContent = msg;
+      overlay.style.display = "flex";
+      overlayHideTimeoutId = setTimeout(hideOverlay, 2000);
+      isSuccess ? playSuccessSound() : playErrorSound();
+    }
+
+    function hideOverlay() {
+      overlay.style.display = "none";
+    }
+
+    function updateStepLabel() {
+      currentStepLabel.textContent = currentStep === "scanPackage" ? "Scan Package" : "Scan Bin";
+    }
+
+    function playSuccessSound() {
+      if (successSound) {
+        successSound.currentTime = 0;
+        successSound.play().catch(() => {});
+      }
+    }
+
+    function playErrorSound() {
+      if (errorSound) {
+        errorSound.currentTime = 0;
+        errorSound.play().catch(() => {});
+      }
+    }
+
+    async function loadCarrierBins(carrierName) {
+      if (!carrierName) {
+        currentBinsDiv.innerHTML = "Select a carrier to see current bins";
+        return;
+      }
+      let html = `<strong>${carrierName} Bins:</strong><br>`;
+      const binsSnap = await getDocs(collection(db, "bins"));
+      let found = false;
+      binsSnap.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.carrier === carrierName) {
+          found = true;
+          html += `${data.binCode} (${data.isFull ? 'Full' : 'Open'})<br>`;
+        }
+      });
+      currentBinsDiv.innerHTML = found ? html : `${html}<em>No bins yet</em>`;
+    }
+
+    async function createNewBin() {
+      const carrierName = carrierSelect.value;
+      if (!carrierName) return;
+
+      try {
+        const carrierDocRef = doc(db, "carriers", carrierName);
+        const binCode = await runTransaction(db, async (transaction) => {
+          const carrierDocSnap = await transaction.get(carrierDocRef);
+          let binCounter = 1;
+          if (!carrierDocSnap.exists()) {
+            transaction.set(carrierDocRef, { binCounter: 1 });
+          } else {
+            binCounter = carrierDocSnap.data().binCounter || 1;
+          }
+
+          const binNumberStr = String(binCounter).padStart(4, "0");
+          const newBinCode = `${carrierName}-BIN-${binNumberStr}`;
+
+          transaction.set(carrierDocRef, { binCounter: binCounter + 1 }, { merge: true });
+          const newBinDocRef = doc(collection(db, "bins"));
+          transaction.set(newBinDocRef, {
+            carrier: carrierName,
+            binCode: newBinCode,
+            isFull: false,
+            createdAt: Date.now()
+          });
+
+          return newBinCode;
+        });
+
+        await generateBinLabel(carrierName, binCode);
+        loadCarrierBins(carrierName);
+      } catch (err) {
+        console.error("Error creating new bin:", err);
+      }
+    }
+
+    async function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const dataURL = canvas.toDataURL("image/png");
+          resolve(dataURL);
+        };
+        img.onerror = (err) => reject(new Error(`Failed to load image: ${url}`));
+        img.src = url;
+      });
+    }
+
+    async function generateBinLabel(carrierName, binCode) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [100, 150]
+      });
+
+      doc.setLineWidth(0.5);
+      doc.rect(5, 5, 90, 140);
+
+      const carrier = carriers.find(c => c.name === carrierName);
+      let logoAdded = false;
+
+      if (carrier && carrier.logo) {
+        try {
+          console.log(`Attempting to load logo for ${carrierName}: ${carrier.logo}`);
+          const logoData = await loadImage(carrier.logo);
+          console.log(`Logo loaded successfully for ${carrierName}`);
+
+          // Load the image to get its dimensions
+          const img = new Image();
+          img.src = logoData;
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+
+          // Calculate dimensions to preserve aspect ratio
+          const maxWidth = 90; // Maximum width within margins (100 mm - 5 mm left - 5 mm right)
+          const maxHeight = 75; // 50% of the label height (150 mm / 2)
+          const aspectRatio = img.width / img.height;
+          let width = maxWidth;
+          let height = maxWidth / aspectRatio;
+          if (height > maxHeight) {
+            height = maxHeight;
+            width = maxHeight * aspectRatio;
+          }
+
+          // Center the logo horizontally
+          const x = (100 - width) / 2;
+          doc.addImage(logoData, 'PNG', x, 5, width, height); // Start at Y=5 mm (top margin)
+          logoAdded = true;
+        } catch (err) {
+          console.error(`Error loading logo for ${carrierName}:`, err);
+          showMessage(`Failed to load carrier logo for ${carrierName}.`, false);
+        }
+      } else {
+        console.warn(`No logo available for ${carrierName}`);
+        showMessage(`No logo available for ${carrierName}.`, false);
+      }
+
+      // Add placeholder text if logo failed to load or is not available
+      if (!logoAdded) {
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("Logo Not Available", 50, 20, { align: "center" });
+      }
+
+      // Adjust text positions to fit below the larger logo
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text(carrierName, (100 - doc.getTextWidth(carrierName)) / 2, 85); // Below logo (5 mm + 75 mm + 5 mm gap)
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "normal");
+      doc.text(binCode, (100 - doc.getTextWidth(binCode)) / 2, 95); // 10 mm below carrier name
+
+      const labelType = labelTypeSelect.value;
+      if (labelType === "barcode") {
+        const barcodeCanvas = document.createElement("canvas");
+        JsBarcode(barcodeCanvas, binCode, { format: "CODE128", displayValue: true, fontSize: 14, width: 2, height: 50 });
+        doc.addImage(barcodeCanvas.toDataURL("image/png"), 'PNG', 10, 110, 80, 30); // Start at Y=110 mm, fits to Y=140 mm
+      } else {
+        const qrCanvas = document.createElement("canvas");
+        new QRious({ element: qrCanvas, value: binCode, size: 80 }); // Reduced size to 80x80 pixels (40 mm x 40 mm at 2 pixels/mm)
+        doc.addImage(qrCanvas.toDataURL("image/png"), 'PNG', 30, 105, 40, 40); // Start at Y=105 mm, fits to Y=145 mm
+      }
+
+      doc.save(`${binCode}.pdf`);
+    }
+
+    async function getOpenBinForCarrier(carrierName) {
+      const binsSnap = await getDocs(collection(db, "bins"));
+      let chosenBin = null;
+      let latestCreated = -1;
+      binsSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.carrier === carrierName && !data.isFull && data.createdAt > latestCreated) {
+          latestCreated = data.createdAt;
+          chosenBin = data.binCode;
+        }
+      });
+      return chosenBin;
+    }
+
+    const scansQuery = query(collection(db, "scans"), orderBy("timestamp", "desc"));
+    const binsQuery = query(collection(db, "bins"), orderBy("createdAt", "desc"));
+    const csvQuery = query(collection(db, "csvExports"), orderBy("timestamp", "desc"));
+
+    function filterDataByTime(data, filter) {
+      const now = Date.now();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const timeFilters = {
+        "today": now - todayStart.getTime(),
+        "7d": 7 * 24 * 60 * 60 * 1000,
+        "30d": 30 * 24 * 60 * 60 * 1000
+      };
+      return filter === "all" ? data : data.filter(d => now - d.timestamp <= timeFilters[filter]);
+    }
+
+    async function updateAnalytics() {
+      const scansSnap = await getDocs(scansQuery);
+      const binsSnap = await getDocs(binsQuery);
+      const allScans = scansSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const allBins = binsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const filteredScans = filterDataByTime(allScans, timeFilter.value);
+      const filteredBins = filterDataByTime(allBins, timeFilter.value);
+
+      renderCarrierChart(filteredScans);
+      renderScansPerHourChart(filteredScans);
+      renderBinsChart(filteredBins);
+      renderScansList(filteredScans);
+    }
+
+    function renderCarrierChart(scans) {
+      const packageScans = scans.filter(s => s.step === "packageScan");
+      const carrierCount = packageScans.reduce((acc, s) => {
+        acc[s.carrier] = (acc[s.carrier] || 0) + 1;
+        return acc;
+      }, {});
+
+      if (charts.carrier) charts.carrier.destroy();
+      charts.carrier = new Chart(document.getElementById("carrier-chart"), {
+        type: "bar",
+        data: {
+          labels: Object.keys(carrierCount),
+          datasets: [{
+            label: "Parcels by Carrier",
+            data: Object.values(carrierCount),
+            backgroundColor: "#0022ee",
+            borderColor: "#0019b3",
+            borderWidth: 1,
+            borderRadius: 6,
+            barThickness: 20
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: '#1a1c2e', font: { size: 14 } } },
+            title: { display: true, text: 'Parcels by Carrier', color: '#1a1c2e', font: { size: 16 } }
+          },
+          scales: {
+            x: { ticks: { color: '#1a1c2e' }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: '#1a1c2e', stepSize: 1 }, grid: { color: '#e0e4e8' } }
+          }
+        }
+      });
+    }
+
+    function renderScansPerHourChart(scans) {
+      const packageScans = scans.filter(s => s.step === "packageScan");
+      const hourlyData = packageScans.reduce((acc, s) => {
+        const hour = new Date(s.timestamp).getHours();
+        acc[hour] = (acc[hour] || 0) + 1;
+        return acc;
+      }, Array(24).fill(0));
+
+      if (charts.scansPerHour) charts.scansPerHour.destroy();
+      charts.scansPerHour = new Chart(document.getElementById("scans-per-hour"), {
+        type: "line",
+        data: {
+          labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
+          datasets: [{
+            label: "Scans per Hour",
+            data: hourlyData,
+            borderColor: "#ff6f61",
+            backgroundColor: "rgba(255, 111, 97, 0.2)",
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#ff6f61",
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { color: '#1a1c2e', font: { size: 14 } } },
+            title: { display: true, text: 'Scans per Hour', color: '#1a1c2e', font: { size: 16 } }
+          },
+          scales: {
+            x: { ticks: { color: '#1a1c2e' }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { color: '#1a1c2e', stepSize: 1 }, grid: { color: '#e0e4e8' } }
+          }
+        }
+      });
+    }
+
+    function renderBinsChart(bins) {
+      const carrierCount = bins.reduce((acc, b) => {
+        acc[b.carrier] = (acc[b.carrier] || 0) + 1;
+        return acc;
+      }, {});
+
+      if (charts.bins) charts.bins.destroy();
+      charts.bins = new Chart(document.getElementById("bins-chart"), {
+        type: "doughnut",
+        data: {
+          labels: Object.keys(carrierCount),
+          datasets: [{
+            label: "Bins by Carrier",
+            data: Object.values(carrierCount),
+            backgroundColor: ["#0022ee", "#ff6f61", "#00c4b4", "#f4a261", "#9370db", "#00ced1"],
+            borderWidth: 2,
+            borderColor: "#fff"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#1a1c2e', font: { size: 14 } } },
+            title: { display: true, text: 'Bins by Carrier', color: '#1a1c2e', font: { size: 16 } }
+          }
+        }
+      });
+    }
+
+    function renderScansList(scans) {
+      scansList.innerHTML = "";
+      scans.forEach(s => {
+        const li = document.createElement("li");
+        const timeStr = new Date(s.timestamp).toLocaleString();
+        li.textContent = s.step === "packageScan" 
+          ? `[${timeStr}] PACKAGE - ${s.carrier}, #${s.trackingNumber}, Bin: ${s.bin}`
+          : `[${timeStr}] BIN - ${s.bin}, ${s.status}`;
+        scansList.appendChild(li);
+      });
+    }
+
+    async function exportCSV() {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const snap = await getDocs(scansQuery);
+      const todayScans = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(d => d.timestamp >= todayStart.getTime() && d.timestamp <= todayEnd.getTime());
+
+      let csv = "step,carrier,trackingNumber,bin,status,timestamp\n";
+      todayScans.forEach(d => {
+        csv += [d.step || "", d.carrier || "", d.trackingNumber || "", d.bin || "", d.status || "", d.timestamp || ""].join(",") + "\n";
+      });
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const dateStr = new Date().toISOString().split('T')[0];
+      const fileName = `scans_${dateStr}.csv`;
+
+      await addDoc(collection(db, "csvExports"), {
+        fileName: fileName,
+        url: url,
+        timestamp: Date.now(),
+        archived: false,
+        isAutomatic: false
+      });
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+
+      loadCsvExports();
+    }
+
+    async function loadCsvExports() {
+      const snap = await getDocs(csvQuery);
+      csvData = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(d => !d.archived);
+
+      const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+      snap.forEach(async (docSnap) => {
+        const data = docSnap.data();
+        if (data.timestamp < thirtyDaysAgo && !data.archived) {
+          await updateDoc(docSnap.ref, { archived: true });
+        }
+      });
+
+      renderCsvList();
+    }
+
+    function renderCsvList() {
+      csvList.innerHTML = "";
+      const start = (currentCsvPage - 1) * csvPerPage;
+      const end = csvPerPage === csvData.length ? csvData.length : start + csvPerPage;
+      const paginatedData = csvData.slice(start, end);
+
+      paginatedData.forEach(d => {
+        const li = document.createElement("li");
+        const dateStr = new Date(d.timestamp).toLocaleDateString();
+        li.innerHTML = `<span>${d.fileName} (${dateStr})</span><a href="${d.url}" download>Download</a>`;
+        csvList.appendChild(li);
+      });
+
+      csvPageInfo.textContent = `Page ${currentCsvPage} of ${Math.ceil(csvData.length / csvPerPage)}`;
+      csvPrev.disabled = currentCsvPage === 1;
+      csvNext.disabled = currentCsvPage === Math.ceil(csvData.length / csvPerPage) || csvData.length === 0;
+    }
+
+    // Initial setup
+    initializeCarrierVisibility();
+    populateCarrierDropdown();
+    updateAnalytics();
+    loadCsvExports();
+    onSnapshot(scansQuery, updateAnalytics);
+    onSnapshot(binsQuery, updateAnalytics);
+    onSnapshot(csvQuery, loadCsvExports);
+  </script>
+</body>
+</html>
